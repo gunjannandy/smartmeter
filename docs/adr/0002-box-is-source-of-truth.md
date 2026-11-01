@@ -1,0 +1,3 @@
+# The Box owns metering; the Ledger is append-only; online-first with offline fallback
+
+The Box measures and enforces limits locally, so it stays safe and correct with no internet. Everything that happens (usage, top-ups, rate changes) is an append-only Ledger entry, and balances are calculated from entries, so devices that were offline merge without overwriting each other. When the Box can reach the internet (the Host's Wi-Fi router or phone hotspot) it syncs to the cloud directly. Otherwise it syncs over Bluetooth through the Host's phone. We rejected a SIM in every Box because of recurring cost and maintenance; a SIM variant may come later.
