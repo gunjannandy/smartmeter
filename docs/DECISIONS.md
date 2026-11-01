@@ -23,6 +23,8 @@ Everything in the **Settled** table is agreed. Treat it as final unless someone 
 | Hardware | Certified parts only. Enclosure with MCB, RCCB and earthing. Factory calibration to about 1%. |
 | Configurations | A short menu of fixed Box configurations on one board. First product is a 4-Socket Box. Expansion bus designed in, modules sold later. |
 | Languages | Bengali, Hindi and English with simple icons. |
+| POC phase | Keep everything as cheap as possible. No custom board yet: use off-the-shelf modules (controller with Bluetooth and Wi-Fi, ready-made meter modules, relays). Move to the certified-parts design only after the POC works. |
+| Beta | After the bench POC, install a box free at one Toto stand to collect real usage data. This is a beta, not a production release. |
 | Manual start | Host sells the first ~20 Boxes by hand and issues credits manually. A payment gateway comes after demand is proven. |
 
 ## Open
