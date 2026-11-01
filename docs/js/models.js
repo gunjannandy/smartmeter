@@ -1,5 +1,5 @@
 import { THREE, mat, emissive, glassMat, rb, box, plain, cyl, ball, ring, place, glow, shadowize, tex,
-  asphaltTex, concreteTex, brickTex, tinTex, shutterTex, windowsTex, signTex, plateTex, qrTex, posterTex } from './gfx.js';
+  asphaltTex, concreteTex, brickTex, tinTex, shutterTex, windowsTex, signTex, plateTex, qrTex, posterTex } from './gfx.js?v=1793548970';
 
 /* Every model faces -z (its front). All sizes are in metres and meant to look like a Kolkata street. */
 

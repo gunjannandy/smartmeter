@@ -1,5 +1,5 @@
-import { THREE, mat, glow, shadowize, dispose, tex, asphaltTex, concreteTex, plain, box, cyl, ball, place } from './gfx.js';
-import * as M from './models.js';
+import { THREE, mat, glow, shadowize, dispose, tex, asphaltTex, concreteTex, plain, box, cyl, ball, place } from './gfx.js?v=1793548970';
+import * as M from './models.js?v=1793548970';
 
 /* The Toto stand, in metres. Camera looks from the street toward the wall with the Box on it. */
 const WALLZ = -3.0, CARZ = -0.75, QUEUE_Z = 5.2;

@@ -1,7 +1,7 @@
-import { createSim, TYPES, CUT_PER_UNIT } from './js/sim.js';
-import { createGame } from './js/game.js';
-import { createScene } from './js/scene.js';
-import { sfx } from './js/audio.js';
+import { createSim, TYPES, CUT_PER_UNIT } from './js/sim.js?v=1793548970';
+import { createGame } from './js/game.js?v=1793548970';
+import { createScene } from './js/scene.js?v=1793548970';
+import { sfx } from './js/audio.js?v=1793548970';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -55,7 +55,9 @@ async function boot() {
   addEventListener('resize', insets);
 
   /* ---------- taps in the world ---------- */
+  let lastTapAt = 0;
   function handleTap(p) {
+    const now = performance.now(); if (now - lastTapAt < 350) return; lastTapAt = now;
     sfx.unlock(); if (G.phase !== 'tutorial' && G.phase !== 'play') return;
     if (p.type === 'pod') { openInside('pod', p.i); sfx.tap(); return; }
     const r = game.tap(p);
