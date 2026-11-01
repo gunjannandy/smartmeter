@@ -138,3 +138,5 @@ body.nogl{overflow:auto}
 @media (max-height:760px){.note{display:none}}
 
 @media (max-width:520px){.topbar .mark{display:none}.strip{gap:8px}.strip small{font-size:9px}}
+
+.hot.tut{border-color:var(--amber);background:rgba(255,176,46,.22)}.hot.tut::before{background:var(--amber)}.hot.tut::after{border-color:var(--amber)}

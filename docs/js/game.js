@@ -71,11 +71,9 @@ export function createGame(sim, { goal = 8, rng = Math.random } = {}) {
       const mk = (o) => out.push(Object.assign({ text: st.text, icon: st.icon, tutorial: true }, o));
       if (st.key === 'park' && g.queue[0]) mk({ kind: 'queue', id: g.queue[0].id, text: 'Tap to park' });
       if (st.key === 'scan') { const i = S.sockets.findIndex((s) => s.status === 'parked'); if (i >= 0) mk({ kind: 'driver', i, text: 'Scan' }); }
-      if (st.key === 'look') { const i = S.sockets.findIndex((s) => s.status === 'charging'); if (i >= 0) mk({ kind: 'vehicle', i, text: 'See the numbers' }); }
       if (st.key === 'cut') mk({ kind: 'transformer', text: 'Cut power' });
       if (st.key === 'back') mk({ kind: 'transformer', text: 'Power back' });
       if (st.key === 'resume') { const i = S.sockets.findIndex((s) => s.status === 'stopped'); if (i >= 0 && S.power) mk({ kind: 'driver', i, text: 'Resume' }); }
-      if (st.key === 'earn') { const i = S.sockets.findIndex((s) => s.status === 'charging'); if (i >= 0) mk({ kind: 'vehicle', i, text: 'Charging…', info: true }); }
       if (st.key === 'pod') mk({ kind: 'box', text: sim.nextPodCost() != null && S.wallet < sim.nextPodCost() ? `Need ₹${sim.nextPodCost()}` : 'Add plug point' });
     } else if (g.phase === 'play') {
       g.queue.forEach((q) => out.push({ kind: 'queue', id: q.id, text: 'Tap to park', icon: 'tap', progress: q.patience / q.max }));
