@@ -337,7 +337,6 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
     if (live) S.sockets.forEach((sk, i) => {
       const e = bayEntry[i]; if (!e || e.mode !== 'parked' || !sk.vehicle || sk.status === 'arriving') return;
       const key = 'veh' + i; used.add(key); const el = hotEl(key, 'Show the live numbers', { type: 'vehicle', i }, false);
-      el.classList.toggle('tut', game.state.phase === 'tutorial' && game.state.step === 2);
       place2(el, tmp3.copy(e.group.position).add(new THREE.Vector3(-0.1, 0.8, 0.6)));
     });
     hotEls.forEach((el, k) => { if (!used.has(k)) el.style.display = 'none'; });

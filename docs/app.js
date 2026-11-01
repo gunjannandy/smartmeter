@@ -96,7 +96,6 @@ async function boot() {
     if (pos) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = '+' + fmtINR(s.cost); el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1700); }
     sfx.coin(); const w = document.querySelector('.wallet'); w.classList.add('pulse'); setTimeout(() => w.classList.remove('pulse'), 350);
   });
-  game.on('step', () => { if (openCard !== 'stats') return; const seen = statsI; setTimeout(() => { if (openCard === 'stats' && statsI === seen && G.phase === 'tutorial') closeAll(); }, 2400); });
   game.on('upset', () => { toast('A driver got tired of waiting and left.', 'warn'); sfx.err(); });
   game.on('phase', (ph) => {
     if (ph === 'play') toast(`Rush hour! Serve ${G.goal} vehicles. Tap each one to park it.`, 'ok');
