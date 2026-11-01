@@ -8,6 +8,7 @@ export const TYPES = {
   loader:  { label: 'E-loader',   cap: 9.0, maxW: 1250, pf: 0.78 },
 };
 export const MAX_PODS = 6;
+export const CUT_PER_UNIT = 0.5; // smartmeter's share, in rupees per unit (illustrative)
 export const POD_COSTS = [20, 50, 80, 110];
 export const SUPPLY_CHOICES = [10, 16, 20, 25, 32];
 const taper = (s) => (s < 0.85 ? 1 : Math.max(0.04, (1 - s) / 0.15));
@@ -17,11 +18,11 @@ export function createSim({ pods = 2 } = {}) {
   const st = {
     t: 18 * 60, speed: 45, power: true, wifi: true, rate: 10, supplyA: 40, tripped: false, overT: 0,
     credits: 1000, earned: 0, wallet: 0, unitsSold: 0, autoStart: false, selected: 'toto',
-    volts: 231, totalA: 0, totalW: 0, outageAt: null, lastSync: null, syncAcc: 0, histAcc: 0,
+    volts: 231, totalA: 0, totalW: 0, stats: { sessions: 0, peakW: 0, unitsBy: [], hist: [], histAcc: 0 }, outageAt: null, lastSync: null, syncAcc: 0, histAcc: 0,
     sockets: [],
     ledger: [],
   };
-  const makeSocket = (i) => ({ id: i, status: 'free', vehicle: null, vid: 0, watts: 0, amps: 0, pf: 1, units: 0, cost: 0, arrive: 0, doneT: 0, hist: [] });
+  const makeSocket = (i) => { st.stats.unitsBy[i] = 0; return { id: i, status: 'free', vehicle: null, vid: 0, watts: 0, amps: 0, pf: 1, units: 0, cost: 0, arrive: 0, doneT: 0, hist: [] }; };
   for (let i = 0; i < pods; i++) st.sockets.push(makeSocket(i));
   const L = {};
   const on = (e, f) => { (L[e] = L[e] || []).push(f); };
@@ -56,7 +57,7 @@ export function createSim({ pods = 2 } = {}) {
   }
   function finish(i, reason) {
     const s = st.sockets[i];
-    s.status = 'done'; s.doneT = 0; s.watts = 0; s.amps = 0;
+    s.status = 'done'; s.doneT = 0; s.watts = 0; s.amps = 0; st.stats.sessions++;
     log('session_end', `Socket ${i + 1}: ${s.units.toFixed(2)} units, ₹${s.cost.toFixed(0)}. ${reason}`);
     toast(`Socket ${i + 1} finished: ${s.units.toFixed(2)} units, ₹${s.cost.toFixed(0)}. ${reason}`, 'ok');
     emit('done', i);
@@ -133,14 +134,15 @@ export function createSim({ pods = 2 } = {}) {
         s.pf = tp.pf * (0.9 + 0.1 * taper(v.soc));
         s.amps = s.watts / (st.volts * s.pf);
         sumA += s.amps; sumW += s.watts;
-        const kwh = (s.watts * dtH) / 1000;
+        const kwh = (s.watts * dtH) / 1000; st.stats.unitsBy[s.id] += kwh;
         v.soc = Math.min(1, v.soc + kwh / tp.cap);
         s.units += kwh; s.cost += kwh * st.rate; st.earned += kwh * st.rate; st.wallet += kwh * st.rate; st.unitsSold += kwh; st.credits -= kwh;
       });
-      st.totalA = sumA; st.totalW = sumW;
+      st.totalA = sumA; st.totalW = sumW; if (sumW > st.stats.peakW) st.stats.peakW = sumW;
       st.sockets.forEach((s) => { if (s.status === 'charging' && s.vehicle.soc >= 0.998) finish(s.id, 'Battery full, session ended automatically.'); });
       if (sumA > st.supplyA) { st.overT += dt; if (st.overT > 2.5) trip(); } else st.overT = Math.max(0, st.overT - dt * 2);
     }
+    st.stats.histAcc += dt; if (st.stats.histAcc >= 1) { st.stats.histAcc = 0; st.stats.hist.push(st.totalW); if (st.stats.hist.length > 60) st.stats.hist.shift(); }
     st.histAcc += dt;
     if (st.histAcc >= 0.5) { st.histAcc = 0; st.sockets.forEach((s) => { s.hist.push(s.watts); if (s.hist.length > 48) s.hist.shift(); }); }
     if (st.wifi && st.power) {

@@ -36,8 +36,8 @@ export function createGame(sim, { goal = 8, rng = Math.random } = {}) {
     enqueue('toto', Infinity); emit('phase', g.phase);
   }
   function beginPlay() {
-    g.queue.forEach((q) => { if (!isFinite(q.patience)) { q.patience = 45; q.max = 45; } });
-    g.phase = 'play'; g.spawnT = 3; g.startEarned = S.earned; g.served = 0; g.upset = 0; emit('phase', g.phase);
+    g.queue.forEach((q) => { if (!isFinite(q.patience)) { q.patience = 70; q.max = 70; } });
+    g.phase = 'play'; g.spawnT = 6; g.startEarned = S.earned; g.served = 0; g.upset = 0; emit('phase', g.phase);
   }
   function checkEnd() {
     if (g.phase !== 'play' || g.served + g.upset < g.goal) return;
@@ -58,9 +58,10 @@ export function createGame(sim, { goal = 8, rng = Math.random } = {}) {
     g.queue.forEach((q) => { q.patience -= dt; });
     const gone = g.queue.filter((q) => q.patience <= 0);
     if (gone.length) { g.queue = g.queue.filter((q) => q.patience > 0); g.upset += gone.length; gone.forEach((q) => emit('upset', q)); checkEnd(); }
-    const remaining = g.goal - g.served - g.upset - g.queue.length - S.sockets.filter((s) => s.vehicle).length;
+    const active = S.sockets.filter((s) => s.vehicle).length;
+    const remaining = g.goal - g.served - g.upset - g.queue.length - active;
     g.spawnT -= dt;
-    if (g.spawnT <= 0 && g.queue.length < 3 && remaining > 0) { enqueue(rng() < 0.7 ? 'toto' : 'scooter', 45); g.spawnT = 5 + rng() * 4; }
+    if (g.spawnT <= 0 && g.queue.length < 2 && active + g.queue.length < S.sockets.length + 1 && remaining > 0) { enqueue(rng() < 0.7 ? 'toto' : 'scooter', 70); g.spawnT = 10 + rng() * 5; }
   }
   /* What should a player tap now? Used for the bubbles above objects. */
   function bubbles() {

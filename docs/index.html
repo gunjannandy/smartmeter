@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1a2230">
-<title>Toto Stand · smartmeter</title>
+<title>Keshtopur Toto Stand · smartmeter</title>
 <meta name="description" content="Run an e-rickshaw charging stand. An interactive preview of smartmeter, a metered multi-socket charging box.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,12 +18,17 @@
 
 <header class="top" id="top">
   <div class="row">
-    <div class="brand"><span class="mark" aria-hidden="true"></span><b>Toto Stand</b></div>
-    <div class="wallet" aria-live="polite"><small>In your pocket</small><strong id="wallet">₹0</strong></div>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><b>Keshtopur Toto Stand</b></div>
+    <button class="wallet" id="walletBtn" aria-label="Open the Host dashboard"><small>In your pocket · tap for dashboard</small><strong id="wallet">₹0</strong></button>
     <div class="tools"><button id="mute" class="icon" aria-label="Sound on or off"></button></div>
   </div>
+  <button class="strip" id="strip" aria-label="Open the Host dashboard">
+    <span><small>Load</small><b id="sLoad">0 kW</b></span><span><small>Charging</small><b id="sAct">0 of 2</b></span><span><small>Sold today</small><b id="sUnits">0 units</b></span>
+    <span><small>Grid</small><b id="sPower"><i class="dot ok"></i>On</b></span><span><small>Wi-Fi</small><b id="sWifi"><i class="dot ok"></i>On</b></span>
+  </button>
   <div class="banner" id="banner" hidden><span id="bannerText"></span><i id="bannerDots" aria-hidden="true"></i></div>
 </header>
+<div id="legend" aria-hidden="true"><span><i class="dot e"></i>Electricity</span><span><i class="dot d"></i>Data</span><span><i class="ringdot"></i>Tap me</span></div>
 <div id="toasts" aria-live="polite"></div>
 <button id="back" class="chip" hidden>&larr; Back</button>
 
@@ -48,14 +53,28 @@
 
 <section class="card" id="insideCard" hidden>
   <header><div><b id="inTitle"></b><small id="inSub"></small></div><button class="x" data-close aria-label="Close">&times;</button></header>
-  <ul class="parts" id="inParts"></ul>
+  <div class="pininfo"><b id="pinTitle">Tap a numbered dot</b><span id="pinDesc">Each dot is a part inside. Tap one to see what it does.</span></div>
+  <div class="chips" id="inParts"></div>
   <button id="addPod" class="wide primary"></button>
+</section>
+
+<section class="card dash" id="dash" hidden>
+  <header><div><b>Host dashboard</b><small>Keshtopur Toto Stand · this shift</small></div><button class="x" data-close aria-label="Close">&times;</button></header>
+  <dl class="grid tiles">
+    <div><dt>Earned</dt><dd id="dEarn">₹0</dd></div><div><dt>Units sold</dt><dd id="dUnits">0</dd></div><div><dt>smartmeter cut</dt><dd id="dCut">₹0</dd><small>₹0.50 per unit</small></div>
+    <div><dt>You keep</dt><dd id="dNet">₹0</dd></div><div><dt>Sessions</dt><dd id="dSess">0</dd></div><div><dt>Peak load</dt><dd id="dPeak">0 kW</dd></div>
+  </dl>
+  <div class="kv"><span>Prepaid units left in the Box</span><b id="dLeft">1000</b></div>
+  <div class="kv"><span>Ledger entries in the cloud</span><b id="dLedger">0 of 0</b></div>
+  <h3>Units by plug point</h3><div id="dBars" class="hbars"></div>
+  <h3>Load, last minute</h3><svg id="dSpark" viewBox="0 0 240 52" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="#ffb02e" stroke-width="2" points=""/></svg>
 </section>
 
 <div id="intro" class="overlay">
   <div class="panel">
     <span class="mark big" aria-hidden="true"></span>
-    <h1>Toto Stand</h1>
+    <h1>কেষ্টপুর টোটো স্ট্যান্ড</h1>
+    <p class="sub">Keshtopur Toto Stand</p>
     <p>Run an e-rickshaw charging stand. Let drivers in, watch the Box meter each one, and keep the power on.</p>
     <button id="start" class="primary wide" disabled>Loading&hellip;</button>
     <small>An interactive preview of <b>smartmeter</b>. Everything here is simulated.</small>
@@ -72,7 +91,7 @@
 </div>
 
 <section id="fallback" hidden>
-  <h1>Toto Stand</h1>
+  <h1>Keshtopur Toto Stand</h1>
   <p>This preview needs WebGL, which this browser does not offer. The idea in short:</p>
   <ol><li>A driver pulls up and scans the QR on a plug-point unit.</li><li>The Box meters that plug point on its own and stops when the battery is full.</li><li>A power cut pauses every session. After power returns, each driver taps to resume.</li><li>The Host sets the price per unit and keeps the accounts. The software never touches the money.</li></ol>
   <p><a href="https://github.com/gunjannandy/smartmeter">Repository</a></p>

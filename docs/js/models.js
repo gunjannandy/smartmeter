@@ -116,63 +116,95 @@ export const HUB_Y = 1.6, POD_Y = 0.98;
 export function makeHub() {
   const g = new THREE.Group(), shell = mat(0xcfd8e0, { roughness: 0.45, metalness: 0.1 });
   box(g, 0.46, 0.36, 0.012, 0.01, mat(0x8a5a35), 0, 0, 0.006);
-  [[0, 0.164, 0.4, 0.012], [0, -0.164, 0.4, 0.012]].forEach(([x, y, w, h]) => box(g, w, h, 0.15, 0.005, shell, x, y, 0.075));
+  [0.164, -0.164].forEach((y) => box(g, 0.4, 0.012, 0.15, 0.005, shell, 0, y, 0.075));
   [-0.194, 0.194].forEach((x) => box(g, 0.012, 0.3, 0.15, 0.004, shell, x, 0, 0.075));
   const hinge = new THREE.Group(); hinge.position.set(-0.2, 0, 0.152); g.add(hinge);
   box(hinge, 0.4, 0.31, 0.012, 0.012, mat(0xf2f5f8, { roughness: 0.35 }), 0.2, 0, 0.006);
-  plain(hinge, 0.34, 0.1, 0.002, new THREE.MeshBasicMaterial({ map: signTex('hubsign', 256, 80, '#14202b', [{ text: 'smartmeter', size: 38, y: 40, font: "'DM Sans',sans-serif", color: '#ffb02e' }]) }), 0.2, 0.06, 0.0125);
-  const led = new THREE.MeshStandardMaterial({ color: 0x2fd37a, emissive: 0x2fd37a, emissiveIntensity: 1.6 }); ball(hinge, 0.012, led, 0.34, -0.1, 0.014, 10, 8);
-  cyl(g, 0.007, 0.12, mat(0x15191e), 0.14, 0.24, 0.1, 8);                                                                                  // antenna
-  cyl(g, 0.016, 0.05, mat(0x15191e), 0, -0.2, 0.075, 10);                                                                                  // cable gland
+  plain(hinge, 0.34, 0.07, 0.002, new THREE.MeshBasicMaterial({ map: signTex('hubsign', 256, 56, '#14202b', [{ text: 'smartmeter', size: 34, y: 28, font: "'DM Sans',sans-serif", color: '#ffb02e' }]) }), 0.2, 0.105, 0.0125);
+  box(hinge, 0.012, 0.03, 0.02, 0.005, mat(0x9aa7b3), 0.385, 0, 0.02);
+  const names = ['PWR', 'WI-FI', 'BLE', 'FAULT'], cols = [0x2fd37a, 0x4aa3ff, 0x6aa8ff, 0xff4b4b], leds = {};
+  names.forEach((n, i) => {
+    const m = new THREE.MeshStandardMaterial({ color: cols[i], emissive: cols[i], emissiveIntensity: 1.6 }); leds[n] = m;
+    ball(hinge, 0.011, m, 0.075 + i * 0.083, 0.0, 0.016, 10, 8); glow(hinge, cols[i], 0.09, 0.075 + i * 0.083, 0.0, 0.03, 0.35);
+    plain(hinge, 0.06, 0.02, 0.002, new THREE.MeshBasicMaterial({ map: signTex('hl' + n, 96, 32, '#e9eef2', [{ text: n, size: 20, y: 17, font: "'DM Mono',monospace", color: '#2a3340', weight: 500 }]) }), 0.075 + i * 0.083, -0.035, 0.0125);
+  });
+  plain(hinge, 0.34, 0.07, 0.002, new THREE.MeshBasicMaterial({ map: signTex('hubqr', 96, 24, '#e9eef2', [{ text: '230 V AC · 16 A', size: 14, y: 12, font: "'DM Mono',monospace", color: '#a33', weight: 500 }]) }), 0.2, -0.105, 0.0125);
+  cyl(g, 0.007, 0.12, mat(0x15191e), 0.14, 0.24, 0.1, 8);                                                            // antenna
+  [-0.12, 0, 0.12].forEach((x, i) => { cyl(g, 0.017, 0.045, mat(0x15191e), x, -0.2, 0.075, 10); cyl(g, i === 1 ? 0.012 : 0.008, 0.1, mat(i === 0 ? 0x1b1b1b : 0x2b3540), x, -0.26, 0.075, 8); });
   const inner = new THREE.Group(); inner.position.set(0, 0, 0.012); g.add(inner); inner.visible = false;
-  const white = mat(0xf2f4f6), pcb = mat(0x1e8f5a), metal = mat(0xc3ccd4, { metalness: 0.7 });
-  box(inner, 0.34, 0.012, 0.008, 0.002, mat(0x9aa7b3, { metalness: 0.6 }), 0, 0.02, 0.004);
-  box(inner, 0.036, 0.085, 0.07, 0.004, white, -0.13, 0.02, 0.04); box(inner, 0.014, 0.02, 0.012, 0.003, mat(0x222a33), -0.13, 0.04, 0.078);
-  box(inner, 0.036, 0.085, 0.07, 0.004, white, -0.09, 0.02, 0.04); box(inner, 0.012, 0.012, 0.012, 0.003, mat(0x3a7bd3), -0.09, 0.04, 0.078);
-  box(inner, 0.034, 0.02, 0.015, 0.003, mat(0x2a3340), -0.03, 0.04, 0.012);
-  box(inner, 0.051, 0.028, 0.003, 0.001, pcb, 0.06, 0.04, 0.014); box(inner, 0.018, 0.016, 0.003, 0.001, metal, 0.075, 0.04, 0.017);
-  box(inner, 0.3, 0.004, 0.004, 0.001, mat(0xd33a3a), 0, -0.07, 0.022); box(inner, 0.3, 0.004, 0.004, 0.001, mat(0x14181d), 0, -0.08, 0.022);
-  g.userData = { hinge, inner, led };
+  const white = mat(0xf2f4f6), pcb = mat(0x1e8f5a), metal = mat(0xc3ccd4, { metalness: 0.7 }), blk = mat(0x14181d), live = mat(0xd33a3a), neu = mat(0x2f6fd0), earth = mat(0x6aa843);
+  box(inner, 0.34, 0.012, 0.008, 0.002, mat(0x9aa7b3, { metalness: 0.6 }), 0, 0.045, 0.004);
+  box(inner, 0.036, 0.085, 0.07, 0.004, white, -0.13, 0.045, 0.04); box(inner, 0.014, 0.022, 0.012, 0.003, mat(0xff8a1f), -0.13, 0.065, 0.078); box(inner, 0.03, 0.01, 0.002, 0.001, blk, -0.13, 0.03, 0.076);     // breaker (MCB)
+  box(inner, 0.036, 0.085, 0.07, 0.004, white, -0.09, 0.045, 0.04); box(inner, 0.014, 0.014, 0.012, 0.003, mat(0x3a7bd3), -0.09, 0.07, 0.078); box(inner, 0.014, 0.014, 0.012, 0.003, blk, -0.09, 0.04, 0.078); // earth-leakage (RCCB)
+  box(inner, 0.036, 0.085, 0.07, 0.004, mat(0xe8eaee), -0.05, 0.045, 0.04); box(inner, 0.012, 0.012, 0.004, 0.002, mat(0x2fd37a, { emissive: 0x2fd37a, emissiveIntensity: 1.2 }), -0.05, 0.07, 0.077); // surge protector
+  box(inner, 0.034, 0.02, 0.015, 0.003, mat(0x2a3340), 0.0, 0.06, 0.012);                                                         // 5 V power module
+  box(inner, 0.06, 0.036, 0.003, 0.001, pcb, 0.09, 0.07, 0.014); box(inner, 0.02, 0.018, 0.004, 0.001, metal, 0.105, 0.07, 0.017); box(inner, 0.012, 0.004, 0.003, 0.001, mat(0xd8b64a), 0.075, 0.056, 0.016); // controller board
+  [-0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.15].forEach((x, i) => { box(inner, 0.034, 0.022, 0.026, 0.004, i < 3 ? live : i < 5 ? neu : earth, x, -0.095, 0.014); box(inner, 0.016, 0.004, 0.004, 0.001, blk, x, -0.088, 0.03); }); // terminals
+  [-0.13, -0.09].forEach((x) => cyl(inner, 0.003, 0.14, live, x, -0.015, 0.03, 6)); cyl(inner, 0.003, 0.12, neu, -0.05, -0.03, 0.03, 6);
+  box(inner, 0.3, 0.004, 0.004, 0.001, live, 0, -0.058, 0.02); box(inner, 0.3, 0.004, 0.004, 0.001, neu, 0, -0.066, 0.02);
+  g.userData = { hinge, inner, leds,
+    pins: [
+      { label: 'Controller', desc: 'Bluetooth and Wi-Fi. Meters nothing itself: it talks to every plug-point unit and to the cloud. About 5 × 3 cm.', pos: new THREE.Vector3(0.09, 0.1, 0.1) },
+      { label: 'Circuit breaker', desc: 'Cuts the whole supply on overload. Sized by what the wall wiring can carry.', pos: new THREE.Vector3(-0.13, 0.11, 0.1) },
+      { label: 'Earth-leakage protector (RCCB)', desc: 'Trips in milliseconds if current leaks to earth. This is what protects a person.', pos: new THREE.Vector3(-0.09, 0.11, 0.1) },
+      { label: 'Surge protector', desc: 'Absorbs voltage spikes from the grid so the electronics survive.', pos: new THREE.Vector3(-0.05, 0.11, 0.1) },
+      { label: '5 V power module', desc: 'Turns mains into 5 V for the controller.', pos: new THREE.Vector3(0.0, 0.085, 0.1) },
+      { label: 'Terminals and wiring', desc: 'Live (red), neutral (blue) and earth (green) leave through the glands at the bottom: power in from the grid, and one cable out to the plug-point units.', pos: new THREE.Vector3(0, -0.07, 0.1) },
+    ],
+  };
   return shadowize(g);
 }
 export function makePod() {
   const g = new THREE.Group(), shell = mat(0xcfd8e0, { roughness: 0.45, metalness: 0.1 });
   box(g, 0.14, 0.2, 0.085, 0.014, shell, 0, 0, 0.0425);
-  const plate = box(g, 0.14, 0.11, 0.01, 0.01, mat(0xeef3f7, { roughness: 0.35, transparent: true, opacity: 1 }), 0, 0.045, 0.09);        // electronics cover
-  box(g, 0.13, 0.085, 0.012, 0.008, mat(0x2b3541), 0, -0.055, 0.092);                                                                    // socket ledge
+  const plate = box(g, 0.14, 0.11, 0.01, 0.01, mat(0xeef3f7, { roughness: 0.35, transparent: true, opacity: 1 }), 0, 0.045, 0.09);
+  box(g, 0.13, 0.085, 0.012, 0.008, mat(0x2b3541), 0, -0.055, 0.092);
   const sock = cyl(g, 0.027, 0.012, mat(0x20272f), 0, -0.058, 0.1, 20); sock.rotation.x = Math.PI / 2;
   const hole = cyl(g, 0.019, 0.014, mat(0x07090c), 0, -0.058, 0.102, 20); hole.rotation.x = Math.PI / 2;
   const led = new THREE.MeshStandardMaterial({ color: 0x2a323b, emissive: 0x000000, emissiveIntensity: 1 });
   const lr = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.004, 8, 24), led); lr.position.set(0, -0.058, 0.098); g.add(lr);
   const lglow = glow(g, 0xffffff, 0.16, 0, -0.058, 0.12, 0);
-  place(g, new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.06), new THREE.MeshBasicMaterial({ map: qrTex() })), 0, 0.045, 0.0955);        // QR sticker
+  place(g, new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.06), new THREE.MeshBasicMaterial({ map: qrTex() })), 0, 0.045, 0.0955);
   const inner = new THREE.Group(); inner.position.set(0, 0.045, 0.012); g.add(inner); inner.visible = false;
-  box(inner, 0.06, 0.04, 0.015, 0.003, mat(0x2f6fd0), -0.02, 0.01, 0.01); box(inner, 0.05, 0.026, 0.019, 0.003, mat(0x14181d), 0.02, -0.025, 0.01);
-  box(inner, 0.035, 0.02, 0.003, 0.001, mat(0x1e8f5a), 0.03, 0.03, 0.005); cyl(inner, 0.002, 0.05, mat(0xd33a3a), -0.04, -0.01, 0.02, 6);
+  box(inner, 0.065, 0.04, 0.015, 0.003, mat(0x2f6fd0), -0.025, 0.012, 0.01); box(inner, 0.022, 0.03, 0.02, 0.004, mat(0x14181d), -0.052, -0.022, 0.01);
+  box(inner, 0.05, 0.026, 0.019, 0.003, mat(0x14181d), 0.02, -0.022, 0.01); box(inner, 0.035, 0.02, 0.003, 0.001, mat(0x1e8f5a), 0.03, 0.03, 0.005);
+  cyl(inner, 0.002, 0.05, mat(0xd33a3a), -0.04, -0.01, 0.02, 6); cyl(inner, 0.002, 0.05, mat(0x2f6fd0), -0.03, -0.01, 0.02, 6);
   box(g, 0.05, 0.03, 0.04, 0.01, mat(0x15191e), 0, 0.11, 0.04);
-  g.userData = { plate, inner, led, lglow, socketLocal: new THREE.Vector3(0, -0.058, 0.108) };
+  g.userData = { plate, inner, led, lglow, socketLocal: new THREE.Vector3(0, -0.058, 0.108),
+    pins: [
+      { label: 'Meter', desc: 'Measures volts, amps and units for this plug point only. This is the number the bill comes from.', pos: new THREE.Vector3(-0.025, 0.06, 0.1) },
+      { label: 'Relay', desc: 'The switch. Opens when the battery is full, on a power cut, or when the Host stops the session.', pos: new THREE.Vector3(0.02, 0.025, 0.1) },
+      { label: 'Small chip', desc: 'Reads the meter, drives the relay and the light ring, and talks to the Box over the data cable.', pos: new THREE.Vector3(0.03, 0.075, 0.1) },
+    ] };
   return shadowize(g);
 }
 
 /* ---------- environment ---------- */
+function bushings(p, xs, y) { xs.forEach((x) => { cyl(p, 0.03, 0.3, mat(0x7a3b24, { roughness: 0.4 }), x, y, 0, 8); [0.08, 0.16, 0.24].forEach((dy) => cyl(p, 0.052, 0.015, mat(0x7a3b24), x, y - 0.14 + dy, 0, 10)); }); }
 export function makeTransformerPole() {
   const g = new THREE.Group(), conc = mat(0x9c9a93, { roughness: 0.9 });
   place(g, new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.15, 8, 12), conc), 0, 4, 0);
   [1.2, 2.6, 4.0].forEach((y) => cyl(g, 0.15, 0.04, mat(0x6e6c66), 0, y, 0, 12));
-  const arm = box(g, 2.3, 0.09, 0.1, 0.02, mat(0x2b2f35), 0, 6.5, 0); box(g, 0.1, 0.09, 1.0, 0.02, mat(0x2b2f35), 0, 6.5, 0);
+  box(g, 2.3, 0.09, 0.1, 0.02, mat(0x2b2f35), 0, 6.5, 0); box(g, 0.1, 0.09, 1.0, 0.02, mat(0x2b2f35), 0, 6.5, 0);
   [-0.85, 0, 0.85].forEach((x) => { cyl(g, 0.025, 0.25, mat(0x7a3b24, { roughness: 0.4 }), x, 6.68, 0, 8); [0.64, 0.7, 0.76].forEach((y) => cyl(g, 0.05, 0.015, mat(0x7a3b24), x, y + 5.98, 0, 10)); });
-  [-0.55, 0.55].forEach((s) => box(g, 0.07, 0.07, 1.2, 0.01, mat(0x2b2f35), s, 4.25, 0.5));
-  box(g, 1.1, 0.07, 1.0, 0.015, mat(0x2b2f35), 0, 4.3, 0.55);
-  const tank = new THREE.Group(); tank.position.set(0, 4.9, 0.55); g.add(tank);
+  g.userData = { top: new THREE.Vector3(0, 6.6, 0) };
+  return shadowize(g);
+}
+/* The transformer sits on the station roof so it is always in view and easy to tap. */
+export function makeTransformerUnit() {
+  const g = new THREE.Group(), steel = mat(0x2b2f35, { roughness: 0.6, metalness: 0.4 });
+  [[-0.6, -0.4], [0.6, -0.4], [-0.6, 0.4], [0.6, 0.4]].forEach(([x, z]) => cyl(g, 0.04, 0.34, steel, x, 0.17, z, 8));
+  box(g, 1.5, 0.1, 1.1, 0.025, steel, 0, 0.36, 0);
+  const tank = new THREE.Group(); tank.position.set(0, 0.95, 0); g.add(tank);
   const tm = mat(0x58707f, { roughness: 0.5, metalness: 0.4 });
   cyl(tank, 0.4, 1.1, tm, 0, 0, 0, 24); cyl(tank, 0.43, 0.07, mat(0x44586a, { metalness: 0.4 }), 0, 0.58, 0, 24);
   for (let i = -2; i <= 2; i++) ring(tank, 0.405, 0.022, mat(0x4a5f70, { metalness: 0.4 }), 0, i * 0.2, 0).rotation.x = Math.PI / 2;
-  [-0.18, 0, 0.18].forEach((x) => { cyl(tank, 0.03, 0.3, mat(0x7a3b24, { roughness: 0.4 }), x, 0.78, 0, 8); [0.7, 0.78, 0.86].forEach((y) => cyl(tank, 0.052, 0.015, mat(0x7a3b24), x, y, 0, 10)); });
-  box(tank, 0.22, 0.14, 0.012, 0.004, mat(0xe0b52a), 0, 0.1, 0.405);
-  const warn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 3), new THREE.MeshStandardMaterial({ color: 0xd62323 })); warn.rotation.x = Math.PI / 2; warn.position.set(0, -0.15, 0.41); tank.add(warn);
-  const glowRing = ring(tank, 0.62, 0.025, new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0 }), 0, 0, 0); glowRing.rotation.x = Math.PI / 2; glowRing.userData.noShadow = true;
-  const hit = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 3.4, 10), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); hit.position.set(0, 5.2, 0.3); g.add(hit);
-  g.userData = { tank, glowRing, hit, top: new THREE.Vector3(0, 6.6, 0), tankTop: new THREE.Vector3(0, 5.6, 0.55) };
+  bushings(tank, [-0.18, 0, 0.18], 0.78);
+  box(tank, 0.5, 0.3, 0.012, 0.004, mat(0xe0b52a), 0, 0.1, 0.405);
+  plain(tank, 0.46, 0.26, 0.002, new THREE.MeshBasicMaterial({ map: signTex('danger', 128, 72, '#e0b52a', [{ text: 'DANGER', size: 28, y: 22, font: "'DM Sans',sans-serif", color: '#7a1010' }, { text: '11 kV · TRANSFORMER', size: 13, y: 52, font: "'DM Mono',monospace", color: '#1b1b1b', weight: 500 }]) }), 0, 0.1, 0.412);
+  const glowRing = ring(g, 0.78, 0.03, new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true, opacity: 0 }), 0, 1.1, 0); glowRing.rotation.x = Math.PI / 2; glowRing.userData.noShadow = true;
+  const hit = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.0, 10), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); hit.position.set(0, 1.0, 0); g.add(hit);
+  g.userData = { tank, glowRing, hit, hv: [-0.18, 0, 0.18].map((x) => new THREE.Vector3(x, 1.75, 0)), lv: new THREE.Vector3(0.42, 0.7, 0.3) };
   return shadowize(g);
 }
 export function wire(from, to, sag = 0.5, r = 0.009, color = 0x15181c) {
@@ -188,7 +220,7 @@ export function makeWall(width = 14) {
   const roof = plain(g, width + 0.4, 0.05, 1.5, new THREE.MeshStandardMaterial({ map: tinTex([width / 1.2, 1]), roughness: 0.55, metalness: 0.4 }), 0, 3.38, 0.55); roof.rotation.x = 0.1;
   [-1, 1].forEach((s) => plain(g, 0.06, 0.7, 0.06, mat(0x3a2e24), s * (width / 2 - 0.1), 3.0, 1.05));
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.0), new THREE.MeshStandardMaterial({
-    map: signTex('toto-sign', 512, 116, '#1f6b4a', [{ text: 'টোটো স্ট্যান্ড', size: 54, y: 44 }, { text: 'TOTO STAND · CHARGING POINT', size: 22, y: 92, weight: 600, font: "'DM Sans',sans-serif", color: '#ffd84a' }]), roughness: 0.6 }));
+    map: signTex('kesh-sign', 512, 116, '#1f6b4a', [{ text: 'কেষ্টপুর টোটো স্ট্যান্ড', size: 50, y: 44 }, { text: 'KESHTOPUR TOTO STAND · CHARGING POINT', size: 21, y: 92, weight: 600, font: "'DM Sans',sans-serif", color: '#ffd84a' }]), roughness: 0.6 }));
   sign.position.set(0, 2.6, 0.162); g.add(sign);
   [[-5.6, 1.9, 0.9, 1.3], [-4.4, 1.8, 0.7, 1.05], [5.2, 2.0, 0.8, 1.2]].forEach(([x, y, w, h], i) => place(g, new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: posterTex(i), roughness: 0.9 })), x, y, 0.162));
   return shadowize(g, true, true);
@@ -239,6 +271,8 @@ export function makeHouses() {
     const m = wm.clone(); m.color = new THREE.Color(cols[Math.floor(Math.random() * cols.length)]); m.map = windowsTex();
     plain(g, w, h, 2.6, m, x + w / 2, h / 2, -15 - Math.random() * 3);
     plain(g, w + 0.2, 0.12, 2.8, mat(0x4a4a48), x + w / 2, h + 0.05, -15);
+    if (Math.random() > 0.4) cyl(g, 0.5, 0.9, mat(0x1b1d20, { roughness: 0.7 }), x + w / 2 + (Math.random() - 0.5), h + 0.55, -15, 12);
+    if (Math.random() > 0.5) cyl(g, 0.02, 1.4, mat(0x44474c), x + w / 2 + 0.8, h + 0.8, -14.5, 5);
     x += w + 0.15;
   }
   return g;
@@ -272,3 +306,33 @@ export function bunting(from, to, n = 12) {
   return g;
 }
 export function groundTextures() { return { asphalt: asphaltTex([8, 3]), concrete: concreteTex([9, 6]), shutter: shutterTex() }; }
+
+export function makeCow() {
+  const g = new THREE.Group(), hide = mat(0xe9e4d8, { roughness: 1 }), patch = mat(0x7a5a3a, { roughness: 1 });
+  box(g, 1.0, 0.55, 0.42, 0.18, hide, 0, 0.85, 0); box(g, 0.34, 0.2, 0.3, 0.06, patch, -0.15, 1.1, 0); box(g, 0.28, 0.3, 0.44, 0.06, patch, 0.25, 0.9, 0);
+  box(g, 0.34, 0.3, 0.26, 0.1, hide, 0.62, 1.05, 0); box(g, 0.14, 0.12, 0.2, 0.05, mat(0xc99a8a), 0.8, 0.98, 0);
+  [-1, 1].forEach((s) => { cyl(g, 0.015, 0.14, mat(0xe0d8c4), 0.58, 1.26, s * 0.1, 6).rotation.x = s * 0.5; box(g, 0.1, 0.05, 0.03, 0.02, patch, 0.55, 1.14, s * 0.15); });
+  [[-0.35, -0.14], [-0.35, 0.14], [0.35, -0.14], [0.35, 0.14]].forEach(([x, z]) => cyl(g, 0.045, 0.62, hide, x, 0.4, z, 8));
+  cyl(g, 0.012, 0.5, patch, -0.55, 0.8, 0, 5).rotation.z = 0.2;
+  return shadowize(g);
+}
+export function makeVegCart() {
+  const g = new THREE.Group(), wood = mat(0x8a6238, { roughness: 0.9 });
+  box(g, 1.5, 0.1, 0.85, 0.02, wood, 0, 0.75, 0); [-1, 1].forEach((s) => cyl(g, 0.34, 0.06, mat(0x15181c), 0, 0.34, s * 0.48, 16).rotation.z = Math.PI / 2);
+  cyl(g, 0.02, 1.2, wood, 0.95, 0.6, 0, 6).rotation.z = 1.2; [-1, 1].forEach((s) => box(g, 1.5, 0.12, 0.03, 0.01, wood, 0, 0.86, s * 0.42));
+  const cols = [0xd8402e, 0x4aa04a, 0xf0a030, 0x8e3a7a, 0xd8402e, 0x4aa04a];
+  for (let i = 0; i < 18; i++) ball(g, 0.07 + (i % 3) * 0.01, mat(cols[i % cols.length], { roughness: 0.6 }), -0.6 + (i % 6) * 0.24, 0.88 + (i % 2) * 0.05, -0.2 + Math.floor(i / 6) * 0.2, 8, 6);
+  cyl(g, 0.02, 1.9, mat(0xcfcfcf), -0.5, 1.7, -0.3, 6);
+  const um = new THREE.Mesh(new THREE.ConeGeometry(1.0, 0.4, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xe5484d, side: THREE.DoubleSide, roughness: 0.8 })); um.position.set(-0.5, 2.6, -0.3); g.add(um);
+  return shadowize(g);
+}
+export function makeNeem() {
+  const g = new THREE.Group(); cyl(g, 0.22, 3.2, mat(0x5b4632, { roughness: 1 }), 0, 1.6, 0, 8, 0.32);
+  [[0, 3.6, 0, 1.5], [-1.1, 3.3, 0.3, 1.1], [1.1, 3.4, -0.2, 1.2], [0.2, 4.4, 0.2, 1.0], [-0.6, 4.0, -0.7, 1.0], [0.8, 3.9, 0.8, 0.9]].forEach(([x, y, z, r], i) => { const b = ball(g, r, mat([0x3d7d3a, 0x2f6b32, 0x4a8c3d][i % 3], { roughness: 1 }), x, y, z, 10, 8); b.scale.y = 0.8; });
+  return shadowize(g);
+}
+export function makeCrow() {
+  const g = new THREE.Group(), m = mat(0x15161a, { roughness: 1 });
+  box(g, 0.22, 0.08, 0.1, 0.03, m, 0, 0, 0); const l = box(g, 0.28, 0.01, 0.1, 0.003, m, -0.2, 0.01, 0), r = box(g, 0.28, 0.01, 0.1, 0.003, m, 0.2, 0.01, 0);
+  g.userData = { l, r }; return g;
+}

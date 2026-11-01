@@ -36,7 +36,8 @@ Everything in the **Settled** table is agreed. Treat it as final unless someone 
 
 | Item | Status |
 |---|---|
-| Product name | Deferred. `smartmeter` is the working repo name. |
+| Product name | Deferred. `smartmeter` is the working repo name. The demo stand is called Keshtopur Toto Stand (কেষ্টপুর টোটো স্ট্যান্ড). |
+| 3D hardware models | Placeholders. They will be rebuilt once the hardware requirements are settled. Part costs shown in the demo are estimates, not quotes. |
 | First pilot region | Proposed: Kolkata, where Suvajit's ground work was done. |
 | Field findings | Suvajit's ground-work findings (how stands bill, charger specs, willingness to pay) are not written down here yet. |
 | Repo licence | No licence file yet. |

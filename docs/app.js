@@ -1,4 +1,4 @@
-import { createSim, TYPES } from './js/sim.js';
+import { createSim, TYPES, CUT_PER_UNIT } from './js/sim.js';
 import { createGame } from './js/game.js';
 import { createScene } from './js/scene.js';
 import { sfx } from './js/audio.js';
@@ -14,7 +14,7 @@ const star = (on) => `<svg viewBox="0 0 24 24"><path d="m12 2.5 2.9 6 6.6.9-4.8 
 function fallback() {
   document.body.classList.add('nogl');
   $('fallback').hidden = false;
-  ['scene', 'labels', 'vignette', 'top', 'intro', 'toasts'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  ['scene', 'labels', 'vignette', 'top', 'intro', 'toasts', 'legend'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
 }
 function pickQuality() {
   const p = params.get('q'); if (p === 'low' || p === 'high') return p;
@@ -23,10 +23,10 @@ function pickQuality() {
 }
 
 async function boot() {
-  try { await Promise.race([document.fonts.load("700 54px 'Noto Sans Bengali'", 'টোটো স্ট্যান্ড চা'), new Promise((r) => setTimeout(r, 1800))]); } catch (e) { /* use the fallback font */ }
+  try { await Promise.race([document.fonts.load("700 54px 'Noto Sans Bengali'", 'কেষ্টপুর টোটো স্ট্যান্ড চা'), new Promise((r) => setTimeout(r, 1800))]); } catch (e) { /* use the fallback font */ }
   const sim = createSim(), game = createGame(sim), S = sim.state, G = game.state;
   let scene = null;
-  try { scene = createScene({ canvas: $('scene'), labelsEl: $('labels'), sim, game, onTap: handleTap, quality: pickQuality() }); } catch (err) { console.error(err); }
+  try { scene = createScene({ canvas: $('scene'), labelsEl: $('labels'), sim, game, onTap: handleTap, onPin: showPin, quality: pickQuality() }); } catch (err) { console.error(err); }
   if (!scene) return fallback();
   window.__toto = { sim, game, scene };
 
@@ -36,13 +36,14 @@ async function boot() {
     const box = $('toasts'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = text; box.appendChild(el);
     while (box.children.length > 2) box.firstChild.remove(); setTimeout(() => el.remove(), 3600);
   }
-  const insets = () => { const open = ['stats', 'hostCard', 'insideCard'].map($).find((c) => !c.hidden); scene.setInsets({ top: $('top').offsetHeight, bottom: open ? open.offsetHeight + 20 : 0 }); };
+  const CARDS = ['stats', 'hostCard', 'insideCard', 'dash'];
+  const insets = () => { const open = CARDS.map($).find((c) => !c.hidden); scene.setInsets({ top: $('top').offsetHeight, bottom: open ? Math.min(open.offsetHeight + 20, innerHeight * 0.55) : 0 }); };
   let openCard = null, statsI = -1, insideKind = 'hub', insideI = 0;
   function showCard(id) {
-    ['stats', 'hostCard', 'insideCard'].forEach((c) => { $(c).hidden = c !== id; }); openCard = id;
+    CARDS.forEach((c) => { $(c).hidden = c !== id; }); openCard = id; document.body.classList.toggle('cardopen', !!id);
     $('back').hidden = !id && scene.getFocus().kind === 'main'; insets();
   }
-  function closeAll() { ['stats', 'hostCard', 'insideCard'].forEach((c) => { $(c).hidden = true; }); openCard = null; statsI = -1; scene.focus('main'); $('back').hidden = true; insets(); }
+  function closeAll() { CARDS.forEach((c) => { $(c).hidden = true; }); openCard = null; statsI = -1; document.body.classList.remove('cardopen'); scene.focus('main'); $('back').hidden = true; insets(); }
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { sfx.tap(); closeAll(); }));
   $('back').addEventListener('click', () => { sfx.tap(); closeAll(); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
@@ -63,15 +64,19 @@ async function boot() {
   function openStats(i) { statsI = i; scene.focus('vehicle', i); showCard('stats'); }
   function openInside(kind, i = 0) {
     insideKind = kind; insideI = i; scene.focus(kind, i); showCard('insideCard');
-    if (kind === 'hub') {
-      $('inTitle').textContent = 'Inside the Box'; $('inSub').textContent = '40 × 30 × 15 cm · mounted on the wall';
-      $('inParts').innerHTML = '<li><b>Controller</b><span>Bluetooth and Wi-Fi. The brain. About 5 × 3 cm.</span></li><li><b>Breaker and earth-leakage protector</b><span>Cuts the supply if something goes wrong.</span></li><li><b>5 V power module</b><span>Powers the controller.</span></li><li><b>Prototype parts</b><span>Roughly ₹3,000 (an estimate, not a quote).</span></li>';
-    } else {
-      $('inTitle').textContent = 'Plug-point unit ' + (i + 1); $('inSub').textContent = '14 × 20 × 8 cm · one per parking spot';
-      $('inParts').innerHTML = '<li><b>Meter</b><span>Measures volts, amps and units for this plug point only.</span></li><li><b>Relay</b><span>Switches this plug point on and off.</span></li><li><b>Small chip</b><span>Talks to the Box over a data cable.</span></li><li><b>Prototype parts</b><span>Roughly ₹1,000 to ₹1,500 (an estimate, not a quote).</span></li>';
-    }
+    $('pinTitle').textContent = 'Tap a numbered dot'; $('pinDesc').textContent = 'Each dot on the part is something inside. Tap one to see what it does.';
+    if (kind === 'hub') { $('inTitle').textContent = 'Inside the Box'; $('inSub').textContent = '40 × 30 × 15 cm · on the wall · parts about ₹3,000 (estimate)'; }
+    else { $('inTitle').textContent = 'Plug-point unit ' + (i + 1); $('inSub').textContent = '14 × 20 × 8 cm · one per parking spot · parts about ₹1,000 to ₹1,500 (estimate)'; }
+    const chips = $('inParts'); chips.innerHTML = '';
+    scene.pins().forEach((p, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = (k + 1) + ' · ' + p.label; b.onclick = () => { scene.selectPin(k); sfx.tap(); }; chips.appendChild(b); });
+  }
+  function showPin(k, p) {
+    $('pinTitle').textContent = (k + 1) + ' · ' + p.label; $('pinDesc').textContent = p.desc;
+    [...$('inParts').children].forEach((b, n) => b.classList.toggle('on', n === k)); sfx.tap();
   }
   $('addPod').addEventListener('click', () => { const i = sim.buyPod(); if (i >= 0) { sfx.start(); toast('New plug point added.', 'ok'); closeAll(); } else sfx.err(); });
+  const openDash = () => { sfx.tap(); scene.focus('main'); showCard('dash'); };
+  $('walletBtn').addEventListener('click', openDash); $('strip').addEventListener('click', openDash);
   $('rateUp').addEventListener('click', () => { sim.setRate(S.rate + 1); sfx.tap(); });
   $('rateDown').addEventListener('click', () => { sim.setRate(S.rate - 1); sfx.tap(); });
   $('syncBtn').addEventListener('click', () => { sim.syncViaPhone(); scene.flashSync(); sfx.start(); });
@@ -118,6 +123,19 @@ async function boot() {
         $('stU').textContent = s.units.toFixed(2); $('stR').textContent = fmtINR(s.cost); $('stP').textContent = Math.round(s.vehicle.soc * 100) + '%';
         $('stNote').textContent = s.status === 'charging' ? 'Cheap chargers draw more current than their watts suggest. That gap is the power factor.' : s.status === 'stopped' ? 'Paused. The driver has to tap to resume.' : s.status === 'done' ? 'Finished. Billed for exactly the units used.' : s.status === 'parked' ? 'Waiting for the driver to scan the QR.' : '';
       }
+    }
+    const chg = S.sockets.filter((s) => s.status === 'charging').length;
+    $('sLoad').textContent = (S.totalW / 1000).toFixed(2) + ' kW'; $('sAct').textContent = chg + ' of ' + S.sockets.length; $('sUnits').textContent = S.unitsSold.toFixed(1) + ' units';
+    $('sPower').innerHTML = `<i class="dot ${S.power ? 'ok' : 'bad'}"></i>${S.power ? 'On' : 'Cut'}`; $('sWifi').innerHTML = `<i class="dot ${S.wifi ? 'ok' : 'warn'}"></i>${S.wifi ? 'On' : 'Off'}`;
+    if (openCard === 'dash') {
+      const cut = S.unitsSold * CUT_PER_UNIT, st = S.stats;
+      $('dEarn').textContent = fmtINR(S.earned); $('dUnits').textContent = S.unitsSold.toFixed(1); $('dCut').textContent = '₹' + cut.toFixed(0); $('dNet').textContent = fmtINR(S.earned - cut);
+      $('dSess').textContent = st.sessions; $('dPeak').textContent = (st.peakW / 1000).toFixed(2) + ' kW'; $('dLeft').textContent = Math.max(0, Math.round(S.credits));
+      const syn = S.ledger.filter((e) => e.synced).length; $('dLedger').textContent = `${syn} of ${S.ledger.length}`;
+      const mx = Math.max(1, ...st.unitsBy), bars = $('dBars');
+      if (bars.children.length !== S.sockets.length) bars.innerHTML = S.sockets.map(() => '<div><span></span><i></i><b></b></div>').join('');
+      [...bars.children].forEach((r, i) => { r.children[0].textContent = 'Plug ' + (i + 1); r.children[1].style.setProperty('--w', (100 * st.unitsBy[i] / mx).toFixed(0) + '%'); r.children[2].textContent = st.unitsBy[i].toFixed(1); });
+      const h = st.hist, top = Math.max(600, ...h); $('dSpark').firstElementChild.setAttribute('points', h.map((v, k) => `${(k / Math.max(1, 59) * 240).toFixed(1)},${(50 - (v / top) * 46).toFixed(1)}`).join(' '));
     }
     if (openCard === 'hostCard') {
       $('rateVal').textContent = fmtINR(S.rate); $('unitsLeft').textContent = Math.max(0, Math.round(S.credits));

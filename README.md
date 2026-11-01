@@ -25,6 +25,6 @@ A multi-socket AC junction box that meters each plug point separately, so small 
 | [`apps/driver/`](apps/driver) | Android app for the person charging. |
 | [`cloud/`](cloud) | Backend: sync, backup, notifications. |
 
-**Live preview:** https://gunjannandy.github.io/smartmeter/ (a small game: run an e-rickshaw charging stand, tap things to learn how the Box works; simulated, no real hardware yet). Source is in [`docs/`](docs): `index.html`, `app.js`, `style.css`, `js/` (simulation, game rules, 3D scene, models). three.js is vendored under `docs/vendor`.
+**Live preview:** https://gunjannandy.github.io/smartmeter/ (a small game: run the Keshtopur Toto Stand, an e-rickshaw charging stand, tap things to learn how the Box works; simulated, no real hardware yet). Source is in [`docs/`](docs): `index.html`, `app.js`, `style.css`, `js/` (simulation, game rules, 3D scene, models). three.js is vendored under `docs/vendor`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) to propose changes or raise a design question.

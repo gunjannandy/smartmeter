@@ -10,7 +10,7 @@ const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const LEDC = { green: 0x2fd37a, blue: 0x3d8bff, amber: 0xffb02e, red: 0xff4b4b };
 
-export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, quality = 'high' }) {
+export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuality, quality = 'high' }) {
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: quality === 'high', powerPreference: 'high-performance' }); } catch (e) { return null; }
   if (!renderer.getContext()) return null;
@@ -48,6 +48,22 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
 
   /* ---------- ground ---------- */
   const world = new THREE.Group(); scene.add(world);
+  /* Moving dots show what flows where: amber = electricity, blue = data. */
+  const lanes = [];
+  function makeLane(curve, color, n, size, speed, opts = {}) {
+    const g = new THREE.Group(); world.add(g); const sp = []; for (let k = 0; k < n; k++) sp.push(glow(g, color, size, 0, 0, 0, 0));
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(48)), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0 })); g.add(line);
+    const L = { g, curve, s: sp, line, speed, vis: 0, target: 0, t: null, temp: !!opts.temp }; lanes.push(L); return L;
+  }
+  function updateLanes(dt, time) {
+    for (let k = lanes.length - 1; k >= 0; k--) {
+      const L = lanes[k];
+      if (L.t != null) { L.t -= dt; L.target = L.t > 0 ? 1 : 0; }
+      L.vis += (L.target - L.vis) * Math.min(1, dt * 6); L.line.material.opacity = L.vis * 0.32;
+      L.s.forEach((sp, n) => { sp.material.opacity = L.vis * 0.95; if (L.vis > 0.02) { const f = (((time * L.speed + n / L.s.length) % 1) + 1) % 1; try { sp.position.copy(L.curve.getPoint(f)); } catch (err) { sp.material.opacity = 0; } } });
+      if (L.temp && L.t != null && L.t <= 0 && L.vis < 0.03) { world.remove(L.g); L.g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); lanes.splice(k, 1); }
+    }
+  }
   const ground = (w, d, x, z, m) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m); p.rotation.x = -Math.PI / 2; p.position.set(x, 0, z); p.receiveShadow = true; world.add(p); return p; };
   ground(70, 12, 0, 10.2, new THREE.MeshStandardMaterial({ map: asphaltTex([14, 3]), roughness: 0.95 }));
   ground(70, 8.0, 0, 0.4, new THREE.MeshStandardMaterial({ map: concreteTex([18, 2]), roughness: 0.95 }));
@@ -66,7 +82,13 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   const houses = M.makeHouses(); world.add(houses);
   [[-9.8, -5.5], [10.4, -6.5], [-12.5, -10]].forEach(([x, z], i) => { const p = M.makePalm(5.5 + i); p.position.set(x, 0, z); p.rotation.y = i * 1.3; world.add(p); });
   const props = M.makeProps(); world.add(props);
-  const dog = M.makeDog(); dog.position.set(-5.2, 0, -2.3); dog.rotation.y = 0.6; world.add(dog);
+  const neem = M.makeNeem(); neem.position.set(-10.2, 0, -3.2); world.add(neem);
+  const cow = M.makeCow(); cow.position.set(-9.6, 0, 7.4); cow.rotation.y = 0.35; world.add(cow);
+  const cart = M.makeVegCart(); cart.position.set(-9.0, 0, 1.4); cart.rotation.y = 0.5; world.add(cart);
+  [[6.1, -0.8, -0.9, 0x2f6fb5, 0xc9372c], [6.8, -0.5, -2.3, 0xd9d4c4, 0x6a4a2a], [8.7, -1.0, -2.6, 0x5b7fc4, 0x8d3b3b]].forEach(([x, z, r, shirt, cap], i) => { const p = M.makePerson({ shirt, skin: i + 1, gamchha: i === 1, cap: i === 1 ? null : cap, phone: false }); p.position.set(x, 0, z); p.rotation.y = r; world.add(p); });
+  const crows = []; for (let k = 0; k < 4; k++) { const c = M.makeCrow(); c.userData.k = k; world.add(c); crows.push(c); }
+  glow(scene, 0xffb86b, 46, -24, 5, -38, 0.85); glow(scene, 0xffd9b0, 26, 8, 14, -40, 0.22); glow(scene, 0xffc9a0, 22, -14, 17, -36, 0.2); glow(scene, 0xffd9b0, 30, 22, 12, -38, 0.18);
+  const dog = M.makeDog(); dog.position.set(-5.9, 0, -2.3); dog.rotation.y = 0.6; world.add(dog);
   [[-5.6, 2.2], [5.6, 2.2]].forEach(([x, z]) => {
     const l = M.makeLamp(); l.position.set(x, 0, z); if (x > 0) l.rotation.y = Math.PI; world.add(l);
     const pl = new THREE.PointLight(0xffc27a, 9, 11, 1.7); pl.position.set(x + (x > 0 ? -0.85 : 0.85), 4.0, z); scene.add(pl);
@@ -74,15 +96,19 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   });
   world.add(M.bunting(new THREE.Vector3(-5.1, 4.05, 2.2), new THREE.Vector3(-7.9, 3.15, WALLZ + 0.4), 14));
   world.add(M.bunting(new THREE.Vector3(5.1, 4.05, 2.2), new THREE.Vector3(8.0, 3.15, WALLZ + 0.4), 14));
-  // pole with the transformer: tap it to cut the power
+  // utility pole at the left, and the transformer on the station roof: tap it to cut the power
   const pole = M.makeTransformerPole(); pole.position.set(-7.4, 0, -0.9); world.add(pole);
-  pole.userData.hit.userData.pick = { type: 'transformer' };
-  const tankWorld = new THREE.Vector3(); pole.userData.tank.getWorldPosition(tankWorld);
-  [[-0.85, 0], [0, 0], [0.85, 0]].forEach(([dx], i) => {
-    world.add(M.wire(new THREE.Vector3(-7.4 + dx, 6.62, -0.9), new THREE.Vector3(-5.6 + i * 0.5, 3.45, WALLZ + 0.9), 0.55));
+  const unit = M.makeTransformerUnit(); unit.position.set(-2.7, 3.45, WALLZ + 0.2); unit.userData.hit.userData.pick = { type: 'transformer' }; world.add(unit);
+  unit.updateMatrixWorld(true);
+  const tankWorld = new THREE.Vector3(); unit.userData.tank.getWorldPosition(tankWorld);
+  const hvWorld = unit.userData.hv.map((v) => unit.localToWorld(v.clone())), lvWorld = unit.localToWorld(unit.userData.lv.clone());
+  [-0.85, 0, 0.85].forEach((dx, i) => {
+    world.add(M.wire(new THREE.Vector3(-7.4 + dx, 6.62, -0.9), hvWorld[i], 0.9));
     world.add(M.wire(new THREE.Vector3(-7.4 + dx, 6.62, -0.9), new THREE.Vector3(-14, 6.1 - i * 0.3, -2 + i * 2), 0.9));
   });
-  world.add(M.wire(new THREE.Vector3(-7.4, 6.55, -0.4), new THREE.Vector3(-0.2, 3.3, WALLZ + 0.12), 0.9, 0.012));
+  world.add(M.wire(new THREE.Vector3(-7.4, 6.55, -0.4), new THREE.Vector3(-14, 5.2, 3), 0.8, 0.012));
+  const feedFrom = lvWorld.clone(), feedTo = new THREE.Vector3(-0.12, M.HUB_Y + 0.2, WALLZ + 0.12);
+  world.add(M.wire(feedFrom, feedTo, 0.5, 0.014, 0x2a2d33));
 
   /* ---------- Box, plug-point units, trunk ---------- */
   const hub = M.makeHub(); hub.position.set(0, M.HUB_Y, WALLZ); world.add(hub);
@@ -96,7 +122,9 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     const g = M.makePod(); g.position.set(slotX(i), M.POD_Y, WALLZ); g.userData.pick = { type: 'pod', i };
     const hit = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.44, 0.3), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); hit.position.set(0, 0, 0.1); hit.userData.pick = { type: 'pod', i }; g.add(hit);
     world.add(g); const stub = cyl(world, 0.014, 0.1, mat(0x7b8590, { metalness: 0.4 }), slotX(i), M.POD_Y + 0.15, WALLZ + 0.05, 8);
-    pods[i] = { group: g, stub, drop: animate ? 0 : 1, x: slotX(i), open: 0 };
+    const px = slotX(i), zz = WALLZ + 0.07, pts = [new THREE.Vector3(0, M.HUB_Y - 0.2, zz), new THREE.Vector3(0, M.POD_Y + 0.2, zz), new THREE.Vector3(px, M.POD_Y + 0.2, zz), new THREE.Vector3(px, M.POD_Y + 0.1, zz)];
+    const eLane = makeLane(new THREE.CatmullRomCurve3(pts), 0xffc247, 5, 0.13, 0.6), dLane = makeLane(new THREE.CatmullRomCurve3(pts.slice().reverse().map((p) => p.clone().add(new THREE.Vector3(0, 0.025, 0.02)))), 0x5aa9ff, 3, 0.1, 0.45);
+    pods[i] = { group: g, stub, drop: animate ? 0 : 1, x: px, open: 0, eLane, dLane };
     if (animate) { g.scale.setScalar(0.01); }
     refreshTrunk();
   }
@@ -111,17 +139,11 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   { const cm = new THREE.MeshStandardMaterial({ color: 0xf6f9fc, emissive: 0xa5c2dd, emissiveIntensity: 0.5, roughness: 1 }); [[0, 0, 0, 0.9], [-0.9, -0.2, 0, 0.62], [0.9, -0.15, 0, 0.7], [0.35, 0.45, 0, 0.62], [-0.4, 0.3, 0.1, 0.55]].forEach(([x, y, z, r]) => ball(cloud, r, cm, x, y, z, 14, 10)); glow(cloud, 0xbcd7ff, 4.5, 0, 0, 0, 0.45); }
   const host = M.makePerson({ shirt: 0xf1eee4, pants: 0x3a3a3a, skin: 2, cap: 0xf6f3ea, phone: true }); host.position.set(4.7, 0, -1.7); host.rotation.y = 0.5; host.userData.pick = { type: 'host' }; world.add(host);
   const hubTop = new THREE.Vector3(0, M.HUB_Y + 0.2, WALLZ + 0.1), hostPhone = new THREE.Vector3(4.9, 1.1, -1.9);
-  function flow(curve, color, n, size) {
-    const g = new THREE.Group(); world.add(g); const s = []; for (let k = 0; k < n; k++) s.push(glow(g, color, size, 0, 0, 0, 0));
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0 })); g.add(line);
-    return { curve, s, line, on: 0, vis: 0 };
-  }
-  const flows = {
-    wifi: flow(new THREE.QuadraticBezierCurve3(hubTop, new THREE.Vector3(3, 6, -4.5), cloud.position.clone().add(new THREE.Vector3(-1, -0.7, 0))), 0xffd27a, 8, 0.28),
-    ble: flow(new THREE.QuadraticBezierCurve3(hubTop, new THREE.Vector3(2.6, 3, -2.6), hostPhone), 0x6aa8ff, 6, 0.24),
-    up: flow(new THREE.QuadraticBezierCurve3(hostPhone, new THREE.Vector3(6, 5.2, -4), cloud.position.clone().add(new THREE.Vector3(-0.6, -0.5, 0))), 0x6aa8ff, 6, 0.24),
-  };
-  const tokenFlows = [];
+  const gridLane = makeLane(new THREE.QuadraticBezierCurve3(feedFrom, feedFrom.clone().lerp(feedTo, 0.5).add(new THREE.Vector3(0, -0.5, 0.2)), feedTo), 0xffc247, 7, 0.24, 0.5);
+  const wifiLane = makeLane(new THREE.QuadraticBezierCurve3(hubTop, new THREE.Vector3(3, 6, -4.5), cloud.position.clone().add(new THREE.Vector3(-1, -0.7, 0))), 0x5aa9ff, 8, 0.26, 0.4);
+  const bleLane = makeLane(new THREE.QuadraticBezierCurve3(hubTop, new THREE.Vector3(2.6, 3, -2.6), hostPhone), 0x5aa9ff, 6, 0.22, 0.45);
+  const upLane = makeLane(new THREE.QuadraticBezierCurve3(hostPhone, new THREE.Vector3(6, 5.2, -4), cloud.position.clone().add(new THREE.Vector3(-0.6, -0.5, 0))), 0x5aa9ff, 6, 0.22, 0.45);
+  const tokenLanes = [];
   let syncFlash = 0;
 
   /* ---------- vehicles ---------- */
@@ -133,6 +155,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     const group = kind === 'toto' ? M.makeToto(variant) : M.makeScooter(variant);
     shadowize(group, true, true);
     if (envTex) group.traverse((o) => { if (o.material && o.material.isMeshStandardMaterial) { o.material.envMap = envTex; o.material.envMapIntensity = 0.55; } });
+    const hb = new THREE.Mesh(kind === 'toto' ? new THREE.BoxGeometry(1.7, 2.2, 3.0) : new THREE.BoxGeometry(1.1, 1.6, 2.2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); hb.position.set(0, kind === 'toto' ? 1.1 : 0.8, 0.1); hb.userData.noShadow = true; group.add(hb);
     const e = { key, type: kind, group, mode: 'enter', p: 0, qx: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), person: null, bay: -1, cable: null, plug: null, motes: [], spin: 0, standing: false };
     group.userData.pick = null; world.add(group); entries.push(e); return e;
   }
@@ -160,6 +183,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   function standDriver(e, i) {
     e.person = M.makePerson({ shirt: [0x2f9e8f, 0xd08a2e, 0x8e63c4, 0xc45a6a, 0x5b7fc4, 0x7da34a][i % 6], skin: i, gamchha: i % 2 === 0, pants: 0x2b3440 });
     e.person.position.set(slotX(i) + 1.0, 0, CARZ + 0.3); e.person.rotation.y = -0.4; e.person.scale.setScalar(0.01); e.person.userData.pick = { type: 'driver', i }; world.add(e.person);
+    const pb = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.0, 0.8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })); pb.position.set(0, 1.0, 0); pb.userData.noShadow = true; e.person.add(pb);
     e.group.userData.seated.visible = false; e.standing = true;
   }
   function buildCable(e) {
@@ -170,7 +194,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     e.curve = new THREE.CatmullRomCurve3(pts);
     e.cable = new THREE.Mesh(new THREE.TubeGeometry(e.curve, 40, 0.012, 6, false), new THREE.MeshStandardMaterial({ color: 0x15191e, roughness: 0.5 })); world.add(e.cable);
     e.plug = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.045), mat(0x20262e)); e.plug.position.copy(s0).add(new THREE.Vector3(0, 0, 0.03)); world.add(e.plug);
-    for (let k = 0; k < 2; k++) e.motes.push(glow(world, 0x74b4ff, 0.14, 0, 0, 0, 0));
+    for (let k = 0; k < 2; k++) e.motes.push(glow(world, 0xffc247, 0.22, 0, 0, 0, 0));
   }
   function spinWheels(e, dist) { (e.group.userData.wheels || []).forEach((w) => { w.rotation.x -= dist / 0.25; }); }
 
@@ -178,7 +202,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function pickAt(cx, cy) {
     ndc.set((cx / vw) * 2 - 1, -(cy / vh) * 2 + 1); ray.setFromCamera(ndc, camera);
-    const roots = [hub, pole, host, stall, ...pods.map((p) => p.group), ...entries.map((e) => e.group), ...entries.filter((e) => e.person).map((e) => e.person)];
+    const roots = [hub, unit, host, stall, ...pods.map((p) => p.group), ...entries.map((e) => e.group), ...entries.filter((e) => e.person).map((e) => e.person)];
     const hits = ray.intersectObjects(roots, true);
     for (const h of hits) { let o = h.object; while (o) { if (o.userData && o.userData.pick) return o.userData.pick; o = o.parent; } }
     return null;
@@ -224,7 +248,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   }
   sim.on('power', () => { burstSparks(); });
   sim.on('pod', (i) => { addPodMesh(i, !reduced); setGoal(); });
-  sim.on('start', (i) => { tokenFlows[i] = tokenFlows[i] || null; const e = bayEntry[i]; if (e && e.person) { const from = e.person.position.clone().add(new THREE.Vector3(0.1, 1.1, -0.2)), to = socketWorld(i); const f = flow(new THREE.QuadraticBezierCurve3(from, from.clone().lerp(to, 0.5).add(new THREE.Vector3(0, 1.4, 0)), to), 0x6aa8ff, 5, 0.2); if (tokenFlows[i]) { world.remove(tokenFlows[i].line.parent); } tokenFlows[i] = f; f.on = 1; f.t = 1.6; } });
+  sim.on('start', (i) => { const e = bayEntry[i]; if (e && e.person) { const from = e.person.position.clone().add(new THREE.Vector3(0.1, 1.1, -0.2)), to = socketWorld(i); const L = makeLane(new THREE.QuadraticBezierCurve3(from, from.clone().lerp(to, 0.5).add(new THREE.Vector3(0, 1.4, 0)), to), 0x5aa9ff, 5, 0.2, 0.8, { temp: true }); L.t = 1.6; } });
 
   /* ---------- bubbles and tags (DOM) ---------- */
   const bubbleEls = new Map(), tags = [];
@@ -265,7 +289,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
       tmp2.copy(tmp).project(camera);
       if (tmp2.z > 1) { el.style.display = 'none'; return; }
       el.style.display = 'flex';
-      const sx = clamp((tmp2.x * 0.5 + 0.5) * vw, 56, vw - 56), sy = clamp((-tmp2.y * 0.5 + 0.5) * vh, 70, vh - 40);
+      const sx = clamp((tmp2.x * 0.5 + 0.5) * vw, 56, vw - 56), sy = clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 48, vh - 40);
       el.style.transform = `translate(${sx.toFixed(1)}px,${sy.toFixed(1)}px) translate(-50%,-100%)`;
       if (b.tutorial && !hintTarget) hintTarget = tmp.clone();
     });
@@ -273,14 +297,56 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     return hintTarget;
   }
   function drawTags() {
-    while (tags.length < pods.length) { const el = document.createElement('div'); el.className = 'tag'; labelsEl.appendChild(el); tags.push(el); }
+    while (tags.length < pods.length) { const i = tags.length, el = document.createElement('button'); el.type = 'button'; el.className = 'podtag'; el.onclick = () => onTap({ type: 'pod', i }); el.setAttribute('aria-label', 'Plug point ' + (i + 1)); labelsEl.appendChild(el); tags.push(el); }
+    const live = game.state.phase === 'tutorial' || game.state.phase === 'play';
     tags.forEach((el, i) => {
-      if (!pods[i] || focus.kind !== 'main') { el.style.display = 'none'; return; }
-      const s = S.sockets[i], cls = !S.power ? 'off' : s.status === 'charging' ? 'run' : s.status === 'stopped' ? 'wait' : 'free';
-      if (el.dataset.c !== cls + i) { el.className = 'tag ' + cls; el.textContent = String(i + 1); el.dataset.c = cls + i; }
-      tmp.set(pods[i].x, M.POD_Y + 0.26, WALLZ + 0.1).project(camera);
+      if (!pods[i] || focus.kind !== 'main' || !live) { el.style.display = 'none'; return; }
+      const s = S.sockets[i], cls = !S.power ? 'off' : s.status === 'charging' ? 'run' : s.status === 'stopped' ? 'wait' : s.status === 'done' ? 'done' : 'free';
+      const prog = s.vehicle ? (s.status === 'done' ? 1 : s.vehicle.soc) : 0, html = s.vehicle && s.status !== 'arriving' ? `<b>${Math.round(prog * 100)}%</b><small>Plug ${i + 1}</small>` : `<b>${i + 1}</b><small>Plug</small>`;
+      if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+      if (el.dataset.c !== cls) { el.className = 'podtag ' + cls; el.dataset.c = cls; }
+      el.style.setProperty('--p', (prog * 360).toFixed(0) + 'deg');
+      tmp.set(pods[i].x, M.POD_Y + 0.3, WALLZ + 0.1).project(camera);
       if (tmp.z > 1) { el.style.display = 'none'; return; }
-      el.style.display = 'grid'; el.style.transform = `translate(${((tmp.x * 0.5 + 0.5) * vw).toFixed(1)}px,${((-tmp.y * 0.5 + 0.5) * vh).toFixed(1)}px) translate(-50%,-100%)`;
+      el.style.display = 'flex'; el.style.transform = `translate(${((tmp.x * 0.5 + 0.5) * vw).toFixed(1)}px,${((-tmp.y * 0.5 + 0.5) * vh).toFixed(1)}px) translate(-50%,-100%)`;
+    });
+  }
+  /* pulsing rings on everything you can tap */
+  stall.updateMatrixWorld(true); const routerWorld = new THREE.Vector3(); stall.userData.router.getWorldPosition(routerWorld); routerWorld.y += 0.28;
+  const hotDefs = [
+    { key: 'box', kind: 'box', pick: { type: 'box' }, title: 'Open the Box', pos: () => tmp3.set(0, M.HUB_Y + 0.3, WALLZ + 0.15) },
+    { key: 'tr', kind: 'transformer', pick: { type: 'transformer' }, title: 'Transformer', pos: () => tmp3.copy(tankWorld).add(new THREE.Vector3(0, 1.25, 0)) },
+    { key: 'host', kind: null, pick: { type: 'host' }, title: 'The Host', pos: () => tmp3.copy(host.position).add(new THREE.Vector3(0, 2.0, 0)) },
+    { key: 'router', kind: null, pick: { type: 'router' }, title: 'Wi-Fi router', pos: () => tmp3.copy(routerWorld) },
+  ];
+  const hotEls = new Map(), tmp3 = new THREE.Vector3();
+  function hotEl(key, title, pick, sm) {
+    let el = hotEls.get(key); if (!el) { el = document.createElement('button'); el.type = 'button'; el.className = 'hot' + (sm ? ' sm' : ''); el.setAttribute('aria-label', title); el.onclick = () => onTap(pick); labelsEl.appendChild(el); hotEls.set(key, el); } return el;
+  }
+  function drawHot(bubs) {
+    const live = (game.state.phase === 'tutorial' || game.state.phase === 'play') && focus.kind === 'main', used = new Set();
+    const place2 = (el, p) => { tmp2.copy(p).project(camera); if (tmp2.z > 1) { el.style.display = 'none'; return; } el.style.display = 'block'; el.style.transform = `translate(${((tmp2.x * 0.5 + 0.5) * vw).toFixed(1)}px,${(clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 24, vh - 24)).toFixed(1)}px) translate(-50%,-50%)`; };
+    if (live) {
+      hotDefs.forEach((d) => { if (d.kind && bubs.some((b) => b.kind === d.kind)) return; used.add(d.key); place2(hotEl(d.key, d.title, d.pick, false), d.pos()); });
+      entries.forEach((e) => { if (e.mode !== 'parked' || bubs.some((b) => b.kind === 'vehicle' && b.i === e.bay)) return; const k = 'v' + e.bay; used.add(k); place2(hotEl(k, 'See the numbers', { type: 'vehicle', i: e.bay }, true), tmp3.copy(e.group.position).add(new THREE.Vector3(0, 1.3, 0))); });
+    }
+    hotEls.forEach((el, k) => { if (!used.has(k)) el.style.display = 'none'; });
+  }
+  /* numbered pins on the parts when a unit is open */
+  let pinEls = [], pinData = null;
+  function buildPins(kind, i) {
+    pinEls.forEach((e) => e.remove()); pinEls = []; pinData = null;
+    const data = kind === 'hub' ? hub.userData.pins : kind === 'pod' && pods[i] ? pods[i].group.userData.pins : null; if (!data) return;
+    pinData = { data, grp: kind === 'hub' ? hub : pods[i].group };
+    data.forEach((p, k) => { const el = document.createElement('button'); el.type = 'button'; el.className = 'pin'; el.textContent = String(k + 1); el.setAttribute('aria-label', p.label); el.onclick = () => { pinEls.forEach((x, n) => x.classList.toggle('on', n === k)); onPin && onPin(k, p); }; labelsEl.appendChild(el); pinEls.push(el); });
+  }
+  function drawPins() {
+    const open = focus.kind === 'hub' ? hub.userData.open || 0 : focus.kind === 'pod' && pods[focus.i] ? pods[focus.i].open : 0;
+    pinEls.forEach((el, k) => {
+      if (!pinData || open < 0.92) { el.style.display = 'none'; return; }
+      tmp.copy(pinData.data[k].pos); pinData.grp.localToWorld(tmp); tmp.project(camera);
+      if (tmp.z > 1) { el.style.display = 'none'; return; }
+      el.style.display = 'grid'; el.style.transform = `translate(${((tmp.x * 0.5 + 0.5) * vw).toFixed(1)}px,${((-tmp.y * 0.5 + 0.5) * vh).toFixed(1)}px) translate(-50%,-50%)`;
     });
   }
 
@@ -336,10 +402,10 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     });
     // hub
     const hu = hub.userData, wantHub = focus.kind === 'hub' ? 1 : 0; hu.open = (hu.open || 0) + (wantHub - (hu.open || 0)) * Math.min(1, dt * 3.2);
-    hu.hinge.rotation.y = -1.9 * hu.open; hu.inner.visible = hu.open > 0.05; hu.led.emissiveIntensity = S.power ? 1.6 : 0;
+    hu.hinge.rotation.y = -1.9 * hu.open; hu.inner.visible = hu.open > 0.05;
     const bubs = game.bubbles();
     beacon.material.opacity = focus.kind === 'main' && bubs.some((b) => b.kind === 'box') ? 0.45 + 0.25 * Math.sin(time * 3.5) : 0;
-    pole.userData.glowRing.material.opacity = focus.kind === 'main' && bubs.some((b) => b.kind === 'transformer') ? 0.55 + 0.35 * Math.sin(time * 4) : 0;
+    unit.userData.glowRing.material.opacity = focus.kind === 'main' && bubs.some((b) => b.kind === 'transformer') ? 0.55 + 0.35 * Math.sin(time * 4) : 0;
     // router LED, host phone
     stall.userData.rled.emissiveIntensity = S.wifi ? 1.6 : 0; stall.userData.rled.color.set(S.wifi ? 0x2fd37a : 0x552222); stall.userData.rled.emissive.set(S.wifi ? 0x2fd37a : 0x000000);
     host.userData.phoneGlow.material.opacity = 0.45 + 0.2 * Math.sin(time * 3);
@@ -348,14 +414,16 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     stall.userData.coal.material.opacity = 0.45 + 0.15 * Math.sin(time * 5);
     // sparks
     for (let k = sparks.length - 1; k >= 0; k--) { const s = sparks[k]; s.userData.life -= dt; s.userData.v.y -= 6 * dt; s.position.addScaledVector(s.userData.v, dt); s.material.opacity = Math.max(0, s.userData.life); if (s.userData.life <= 0) { scene.remove(s); sparks.splice(k, 1); } }
-    // data flows
-    flows.wifi.on = S.wifi && S.power && (S.ledger.some((e) => !e.synced) || Math.sin(time * 0.8) > 0.3) ? 1 : 0;
-    if (syncFlash > 0) { syncFlash -= dt; flows.ble.on = 1; flows.up.on = 1; } else { flows.ble.on = 0; flows.up.on = 0; }
-    [flows.wifi, flows.ble, flows.up, ...tokenFlows.filter(Boolean)].forEach((f) => {
-      if (f.t != null) { f.t -= dt; f.on = f.t > 0 ? 1 : 0; }
-      f.vis += ((f.on ? 1 : 0) - f.vis) * Math.min(1, dt * 6); f.line.material.opacity = f.vis * 0.22;
-      f.s.forEach((s, k) => { s.material.opacity = f.vis * 0.95; if (f.vis > 0.02) s.position.copy(f.curve.getPoint((time * 0.45 + k / f.s.length) % 1)); });
-    });
+    // electricity (amber) and data (blue)
+    gridLane.target = S.power ? 0.35 + Math.min(0.65, S.totalW / 1200) : 0;
+    pods.forEach((p, i) => { const st = S.sockets[i].status; p.eLane.target = S.power ? (st === 'charging' ? 1 : 0.12) : 0; p.dLane.target = S.power ? 0.6 : 0; });
+    wifiLane.target = S.wifi && S.power && (S.ledger.some((e) => !e.synced) || Math.sin(time * 0.8) > 0.3) ? 1 : 0;
+    if (syncFlash > 0) { syncFlash -= dt; bleLane.target = 1; upLane.target = 1; } else { bleLane.target = 0; upLane.target = 0; }
+    updateLanes(dt, time);
+    const hu0 = hub.userData.leds, bl = (f) => (Math.sin(time * f) > 0 ? 1 : 0.15);
+    hu0.PWR.emissiveIntensity = S.power ? 1.8 : 0; hu0['WI-FI'].emissiveIntensity = S.power && S.wifi ? (S.ledger.some((e) => !e.synced) ? 1.8 * bl(10) : 1.2) : 0;
+    hu0.BLE.emissiveIntensity = S.power ? (syncFlash > 0 ? 1.8 * bl(12) : 0.45) : 0; hu0.FAULT.emissiveIntensity = S.tripped ? 1.8 * bl(8) : 0;
+    crows.forEach((c) => { const a = time * 0.18 + c.userData.k * 1.7; c.position.set(2 + Math.cos(a) * (8 + c.userData.k), 8.5 + Math.sin(a * 2) * 0.6 + c.userData.k * 0.5, -6 + Math.sin(a) * 4); c.rotation.y = -a; const fl = Math.sin(time * 9 + c.userData.k) * 0.5; c.userData.l.rotation.z = fl; c.userData.r.rotation.z = -fl; });
     // lighting
     const k = Math.min(1, dt * 4), amb = S.power ? 1 : 0.3, lamp = S.power ? 1 : 0;
     hemi.intensity += ((S.power ? 0.9 : 0.28) - hemi.intensity) * k; sun.intensity += ((S.power ? 2.4 : 0.9) - sun.intensity) * k; exposure += ((S.power ? 1.0 : 0.66) - exposure) * k; renderer.toneMappingExposure = exposure;
@@ -372,7 +440,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
     if (!reduced && focus.kind === 'main' && ptr.size === 0) camera.position.x += Math.sin(time * 0.22) * 0.12;
     camera.lookAt(cam.tx, cam.ty, cam.tz);
     renderer.render(scene, camera);
-    hintTarget = drawBubbles(bubs); drawTags();
+    hintTarget = drawBubbles(bubs); drawTags(); drawHot(bubs); drawPins();
     // quality guard: drop detail on slow devices
     fpsAcc += dt; fpsN++; if (fpsAcc > 2) { const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; if (fps < 24 && q === 'high') { lowT++; if (lowT >= 2) setQuality('low'); } else lowT = 0; }
   }
@@ -385,7 +453,9 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onQuality, qua
   resize(); requestAnimationFrame(loop);
 
   return {
-    focus(kind, i = 0) { focus = { kind, i }; setGoal(); },
+    focus(kind, i = 0) { focus = { kind, i }; buildPins(kind, i); setGoal(); },
+    pins: () => (pinData ? pinData.data : []),
+    selectPin(k) { if (!pinData || !pinData.data[k]) return; pinEls.forEach((x, n) => x.classList.toggle('on', n === k)); onPin && onPin(k, pinData.data[k]); },
     getFocus: () => focus,
     setInsets(v) { Object.assign(ins, v); resize(); },
     flashSync() { syncFlash = 3.2; },
