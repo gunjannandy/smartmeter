@@ -15,6 +15,7 @@ A multi-socket AC junction box that meters each plug point separately, so small 
 |---|---|
 | [`GLOSSARY.md`](GLOSSARY.md) | Shared vocabulary. Use these words in code, issues and docs. |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Start here: what is settled and what is open. |
+| [`docs/TEAM.md`](docs/TEAM.md) | Who does what. |
 | [`docs/adr/`](docs/adr) | Architecture decisions and why we made them. |
 | [`docs/feasibility/`](docs/feasibility) | Feasibility questions, proof-of-concept plan and cost model. |
 | [`docs/research/`](docs/research) | Market, regulation and technology research (secondary sources; unverified items are flagged). |
