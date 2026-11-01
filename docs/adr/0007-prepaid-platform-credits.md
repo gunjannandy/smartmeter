@@ -1,0 +1,3 @@
+# We earn a small cut per Unit, paid by Hosts as prepaid credits
+
+A Host buys credits from us and the Box deducts from them as Units are metered. When credits run out the Box warns, then locks Sockets after a short grace period. We rejected monthly invoicing because a Host who stops paying keeps getting free service, and a flat annual fee because revenue would not grow with usage. Consequence: Host-to-us payment is the one money flow we handle, manual for the first boxes and a payment gateway later. Revenue per Socket is small, so Box cost and hardware margin matter a lot (see docs/feasibility).

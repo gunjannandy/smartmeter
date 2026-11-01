@@ -14,7 +14,9 @@ A multi-socket AC junction box that meters each plug point separately, so small 
 | Path | What lives there |
 |---|---|
 | [`GLOSSARY.md`](GLOSSARY.md) | Shared vocabulary. Use these words in code, issues and docs. |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Start here: what is settled and what is open. |
 | [`docs/adr/`](docs/adr) | Architecture decisions and why we made them. |
+| [`docs/feasibility/`](docs/feasibility) | Feasibility questions, proof-of-concept plan and cost model. |
 | [`docs/research/`](docs/research) | Market, regulation and technology research (secondary sources; unverified items are flagged). |
 | [`hardware/`](hardware) | PCB, parts list, enclosure, calibration. |
 | [`firmware/`](firmware) | Code running on the box: metering, relays, ledger, Bluetooth/Wi-Fi. |
