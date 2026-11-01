@@ -306,9 +306,9 @@ export function makeWall(width = 14) {
   plain(g, width, 0.1, 0.34, mat(0xbfb7a6), 0, 3.28, 0);
   const roof = plain(g, width + 0.4, 0.05, 1.5, new THREE.MeshStandardMaterial({ map: tinTex([width / 1.2, 1]), roughness: 0.55, metalness: 0.4 }), 0, 3.38, 0.55); roof.rotation.x = 0.1;
   [-1, 1].forEach((s) => plain(g, 0.06, 0.7, 0.06, mat(0x3a2e24), s * (width / 2 - 0.1), 3.0, 1.05));
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.0), new THREE.MeshStandardMaterial({
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.77), new THREE.MeshStandardMaterial({
     map: signTex('kesh-sign', 512, 116, '#1f6b4a', [{ text: 'কেষ্টপুর টোটো স্ট্যান্ড', size: 50, y: 44 }, { text: 'KESHTOPUR TOTO STAND · CHARGING POINT', size: 21, y: 92, weight: 600, font: "'DM Sans',sans-serif", color: '#ffd84a' }]), roughness: 0.6 }));
-  sign.position.set(0, 2.6, 0.162); g.add(sign);
+  sign.position.set(0, 2.28, 0.162); g.add(sign);
   [[-5.6, 1.9, 0.9, 1.3], [-4.4, 1.8, 0.7, 1.05], [5.2, 2.0, 0.8, 1.2]].forEach(([x, y, w, h], i) => place(g, new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: posterTex(i), roughness: 0.9 })), x, y, 0.162));
   return shadowize(g, true, true);
 }
