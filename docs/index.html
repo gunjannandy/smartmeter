@@ -17,15 +17,15 @@
 <div id="vignette"></div>
 
 <header class="top" id="top">
-  <div class="row">
-    <div class="brand"><span class="mark" aria-hidden="true"></span><b>Keshtopur Toto Stand</b></div>
-    <button class="wallet" id="walletBtn" aria-label="Open the Host dashboard"><small>In your pocket · tap for dashboard</small><strong id="wallet">₹0</strong></button>
-    <div class="tools"><button id="mute" class="icon" aria-label="Sound on or off"></button></div>
+  <div class="topbar">
+    <span class="mark" aria-hidden="true"></span>
+    <b class="bname">Keshtopur Toto Stand</b>
+    <button class="wallet" id="walletBtn" aria-label="Open the Host dashboard"><small>Pocket</small><strong id="wallet">₹0</strong></button>
+    <button class="strip" id="strip" aria-label="Open the Host dashboard">
+      <span><small>Load</small><b id="sLoad">0 kW</b></span><span><small>Active</small><b id="sAct">0/2</b></span><span><small>Sold</small><b id="sUnits">0 u</b></span><span><small>Grid · Wi-Fi</small><b id="sPower"><i class="dot ok"></i><i class="dot ok"></i></b></span>
+    </button>
+    <button id="mute" class="icon" aria-label="Sound on or off"></button>
   </div>
-  <button class="strip" id="strip" aria-label="Open the Host dashboard">
-    <span><small>Load</small><b id="sLoad">0 kW</b></span><span><small>Charging</small><b id="sAct">0 of 2</b></span><span><small>Sold today</small><b id="sUnits">0 units</b></span>
-    <span><small>Grid</small><b id="sPower"><i class="dot ok"></i>On</b></span><span><small>Wi-Fi</small><b id="sWifi"><i class="dot ok"></i>On</b></span>
-  </button>
   <div class="banner" id="banner" hidden><span id="bannerText"></span><i id="bannerDots" aria-hidden="true"></i></div>
 </header>
 <div id="legend" aria-hidden="true"><span><i class="dot e"></i>Electricity</span><span><i class="dot d"></i>Data</span><span><i class="ringdot"></i>Tap me</span></div>
@@ -34,7 +34,7 @@
 
 <section class="card" id="stats" hidden>
   <header><div><b id="stTitle"></b><small id="stSub"></small></div><button class="x" data-close aria-label="Close">&times;</button></header>
-  <div class="big"><span id="stW">0</span><small>W</small></div>
+  <div class="big"><span id="stW">0</span><small>W</small><em id="stP2"></em></div>
   <div class="bar"><i id="stBar"></i></div>
   <dl class="grid">
     <div><dt>Volts</dt><dd id="stV">230</dd></div><div><dt>Amps</dt><dd id="stA">0</dd></div><div><dt>Power factor</dt><dd id="stPF">1</dd></div>

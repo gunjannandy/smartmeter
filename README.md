@@ -1,5 +1,7 @@
 # smartmeter
 
+[![Play the demo](https://img.shields.io/badge/%E2%96%B6%20Play%20the%20demo-Keshtopur%20Toto%20Stand-ffb02e?style=for-the-badge)](https://gunjannandy.github.io/smartmeter/)
+
 A multi-socket AC junction box that meters each plug point separately, so small hosts (e-rickshaw unions, landlords, shop owners) can let drivers charge Toto and e-bikes and bill them per unit. Built for tier 2/3 cities in India. Working name: `smartmeter` (may change).
 
 **Principles**

@@ -37,11 +37,16 @@ async function boot() {
     while (box.children.length > 2) box.firstChild.remove(); setTimeout(() => el.remove(), 3600);
   }
   const CARDS = ['stats', 'hostCard', 'insideCard', 'dash'];
-  const insets = () => { const open = CARDS.map($).find((c) => !c.hidden); scene.setInsets({ top: $('top').offsetHeight, bottom: open ? Math.min(open.offsetHeight + 20, innerHeight * 0.55) : 0 }); };
+  const FOCUS_CARDS = ['stats', 'insideCard', 'dash'];
+  const insets = () => {
+    const open = CARDS.map($).find((c) => !c.hidden), focusMode = !!open && FOCUS_CARDS.includes(open.id); document.body.classList.toggle('focus', focusMode);
+    const hh = $('top').offsetHeight; document.documentElement.style.setProperty('--hh', hh + 'px');
+    scene.setInsets({ top: focusMode ? 0 : hh, bottom: open ? Math.min(open.offsetHeight + 16, innerHeight * 0.5) : 0 });
+  };
   let openCard = null, statsI = -1, insideKind = 'hub', insideI = 0;
   function showCard(id) {
     CARDS.forEach((c) => { $(c).hidden = c !== id; }); openCard = id; document.body.classList.toggle('cardopen', !!id);
-    $('back').hidden = !id && scene.getFocus().kind === 'main'; insets();
+    $('back').hidden = true; insets();
   }
   function closeAll() { CARDS.forEach((c) => { $(c).hidden = true; }); openCard = null; statsI = -1; document.body.classList.remove('cardopen'); scene.focus('main'); $('back').hidden = true; insets(); }
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { sfx.tap(); closeAll(); }));
@@ -65,8 +70,8 @@ async function boot() {
   function openInside(kind, i = 0) {
     insideKind = kind; insideI = i; scene.focus(kind, i); showCard('insideCard');
     $('pinTitle').textContent = 'Tap a numbered dot'; $('pinDesc').textContent = 'Each dot on the part is something inside. Tap one to see what it does.';
-    if (kind === 'hub') { $('inTitle').textContent = 'Inside the Box'; $('inSub').textContent = '40 × 30 × 15 cm · on the wall · parts about ₹3,000 (estimate)'; }
-    else { $('inTitle').textContent = 'Plug-point unit ' + (i + 1); $('inSub').textContent = '14 × 20 × 8 cm · one per parking spot · parts about ₹1,000 to ₹1,500 (estimate)'; }
+    if (kind === 'hub') { $('inTitle').textContent = 'Inside the Box'; $('inSub').textContent = '40 × 30 × 15 cm · parts ≈ ₹3,000 (estimate)'; }
+    else { $('inTitle').textContent = 'Plug-point unit ' + (i + 1); $('inSub').textContent = '14 × 20 × 8 cm · parts ≈ ₹1,000–1,500 (estimate)'; }
     const chips = $('inParts'); chips.innerHTML = '';
     scene.pins().forEach((p, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = (k + 1) + ' · ' + p.label; b.onclick = () => { scene.selectPin(k); sfx.tap(); }; chips.appendChild(b); });
   }
@@ -120,13 +125,13 @@ async function boot() {
         $('stTitle').textContent = tp.label; $('stSub').textContent = 'Plug point ' + (statsI + 1);
         $('stW').textContent = Math.round(s.watts); $('stBar').style.width = Math.round(s.vehicle.soc * 100) + '%';
         $('stV').textContent = S.power ? S.volts.toFixed(0) : '0'; $('stA').textContent = s.amps.toFixed(2); $('stPF').textContent = s.watts > 0 ? s.pf.toFixed(2) : '–';
-        $('stU').textContent = s.units.toFixed(2); $('stR').textContent = fmtINR(s.cost); $('stP').textContent = Math.round(s.vehicle.soc * 100) + '%';
+        $('stP2').textContent = Math.round(s.vehicle.soc * 100) + '% charged'; $('stU').textContent = s.units.toFixed(2); $('stR').textContent = fmtINR(s.cost); $('stP').textContent = Math.round(s.vehicle.soc * 100) + '%';
         $('stNote').textContent = s.status === 'charging' ? 'Cheap chargers draw more current than their watts suggest. That gap is the power factor.' : s.status === 'stopped' ? 'Paused. The driver has to tap to resume.' : s.status === 'done' ? 'Finished. Billed for exactly the units used.' : s.status === 'parked' ? 'Waiting for the driver to scan the QR.' : '';
       }
     }
     const chg = S.sockets.filter((s) => s.status === 'charging').length;
-    $('sLoad').textContent = (S.totalW / 1000).toFixed(2) + ' kW'; $('sAct').textContent = chg + ' of ' + S.sockets.length; $('sUnits').textContent = S.unitsSold.toFixed(1) + ' units';
-    $('sPower').innerHTML = `<i class="dot ${S.power ? 'ok' : 'bad'}"></i>${S.power ? 'On' : 'Cut'}`; $('sWifi').innerHTML = `<i class="dot ${S.wifi ? 'ok' : 'warn'}"></i>${S.wifi ? 'On' : 'Off'}`;
+    $('sLoad').textContent = (S.totalW / 1000).toFixed(2) + ' kW'; $('sAct').textContent = chg + '/' + S.sockets.length; $('sUnits').textContent = S.unitsSold.toFixed(1) + ' u';
+    const dots = `<i class="dot ${S.power ? 'ok' : 'bad'}"></i><i class="dot ${S.wifi ? 'ok' : 'warn'}"></i>`; if ($('sPower').dataset.d !== dots) { $('sPower').innerHTML = dots; $('sPower').dataset.d = dots; }
     if (openCard === 'dash') {
       const cut = S.unitsSold * CUT_PER_UNIT, st = S.stats;
       $('dEarn').textContent = fmtINR(S.earned); $('dUnits').textContent = S.unitsSold.toFixed(1); $('dCut').textContent = '₹' + cut.toFixed(0); $('dNet').textContent = fmtINR(S.earned - cut);

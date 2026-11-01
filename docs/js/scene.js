@@ -211,15 +211,18 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
   /* ---------- camera ---------- */
   const cam = { az: 0.34, pol: 1.12, r: 15, tx: 0, ty: 1.0, tz: 0.8 }, goal = Object.assign({}, cam);
   let focus = { kind: 'main', i: 0 }, dragAz = 0, dragPol = 0, zoomK = 1, vw = 1, vh = 1, ins = { top: 0, bottom: 0, left: 0, right: 0 }, hintPan = 0;
-  const aspectEff = () => Math.max(280, vw - 0.5 * (ins.left + ins.right)) / Math.max(260, vh - ins.top - ins.bottom);
-  const fit = (hw, hh, depth) => { const t = Math.tan((camera.fov * Math.PI) / 360); return clamp(Math.max(hw / (t * aspectEff()), hh / t) + depth, 0.5, 44); };
+  /* Distance that fits a box of half-width hw and half-height hh into the part of the screen the HUD leaves free. */
+  const fit = (hw, hh, depth) => {
+    const t = Math.tan((camera.fov * Math.PI) / 360), fw = Math.max(0.5, (vw - 0.5 * (ins.left + ins.right)) / vw), fh = Math.max(0.35, (vh - ins.top - ins.bottom) / vh);
+    return clamp(Math.max(hw / (t * camera.aspect * fw), hh / (t * fh)) + depth, 0.5, 44);
+  };
   function activeHalfWidth() { const xs = pods.map((p) => Math.abs(p.x)); return Math.max(3.3, Math.max(...xs) + 1.5); }
   function setGoal() {
     const f = focus;
-    if (f.kind === 'hub') Object.assign(goal, { az: 0.14, pol: 1.5, r: fit(0.3, 0.26, 0.12), tx: -0.02, ty: M.HUB_Y, tz: WALLZ + 0.1 });
-    else if (f.kind === 'pod' && pods[f.i]) Object.assign(goal, { az: 0.12, pol: 1.5, r: fit(0.11, 0.13, 0.1), tx: pods[f.i].x, ty: M.POD_Y, tz: WALLZ + 0.05 });
-    else if (f.kind === 'vehicle' && bayEntry[f.i]) Object.assign(goal, { az: 0.45, pol: 1.22, r: fit(1.9, 1.6, 2.2), tx: slotX(f.i), ty: 0.9, tz: CARZ });
-    else Object.assign(goal, { az: 0.3, pol: 1.12, r: fit(aspectEff() < 0.9 ? Math.min(activeHalfWidth(), 3.1) : aspectEff() < 1.3 ? 5.0 : 7.2, 3.3, 3.0), tx: 0, ty: 1.1, tz: 0.8 });
+    if (f.kind === 'hub') Object.assign(goal, { az: 0.14, pol: 1.5, r: fit(0.36, 0.27, 0.12), tx: -0.02, ty: M.HUB_Y, tz: WALLZ + 0.1 });
+    else if (f.kind === 'pod' && pods[f.i]) Object.assign(goal, { az: 0.12, pol: 1.5, r: fit(0.12, 0.13, 0.1), tx: pods[f.i].x, ty: M.POD_Y, tz: WALLZ + 0.05 });
+    else if (f.kind === 'vehicle' && bayEntry[f.i]) Object.assign(goal, { az: 0.5, pol: 1.15, r: fit(1.9, 1.7, 2.2), tx: slotX(f.i), ty: 1.0, tz: CARZ - 0.4 });
+    else Object.assign(goal, { az: 0.3, pol: camera.aspect < 0.85 ? 1.0 : 1.12, r: fit(camera.aspect < 0.85 ? Math.min(activeHalfWidth(), 3.1) : camera.aspect < 1.3 ? 5.0 : 7.2, 3.4, 2.0), tx: 0, ty: 1.1, tz: 0.8 });
     dragAz = 0; dragPol = 0; zoomK = 1; camera.near = f.kind === 'hub' || f.kind === 'pod' ? 0.04 : 0.3; camera.updateProjectionMatrix();
   }
   function resize() {
@@ -234,8 +237,8 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
     if (!p) { if (e.pointerType !== 'touch') canvas.style.cursor = pickAt(e.clientX, e.clientY) ? 'pointer' : ''; return; }
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 7) downAt.moved = true;
     if (ptr.size === 2) { ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); const [a, b] = [...ptr.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (lastPinch) zoomK = clamp(zoomK * (lastPinch / d), 0.5, 1.7); lastPinch = d; return; }
-    const lim = focus.kind === 'main' ? 0.9 : 0.5;
-    dragAz = clamp(dragAz - (e.clientX - p.x) * 0.005, -lim, lim); dragPol = clamp(dragPol - (e.clientY - p.y) * 0.004, -0.3, 0.3); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const lim = focus.kind === 'main' ? 1.15 : 0.6;
+    dragAz = clamp(dragAz - (e.clientX - p.x) * 0.0085, -lim, lim); dragPol = clamp(dragPol - (e.clientY - p.y) * 0.007, -0.4, 0.4); ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
   });
   canvas.addEventListener('pointerup', (e) => { if (ptr.size === 1 && downAt && !downAt.moved) { const p = pickAt(e.clientX, e.clientY); if (p) onTap(p); } ptr.delete(e.pointerId); lastPinch = 0; });
   canvas.addEventListener('pointercancel', (e) => { ptr.delete(e.pointerId); lastPinch = 0; });
@@ -267,30 +270,31 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
     if (!el) { el = document.createElement('button'); el.className = 'bubble'; el.type = 'button'; labelsEl.appendChild(el); bubbleEls.set(key, el); }
     return el;
   }
+  /* Bubbles for vehicles and drivers sit on the empty pavement below them, so they never cover the plug points on the wall. */
   function targetPos(b, out) {
-    if (b.kind === 'queue') { const e = queueEntry(b.id); if (!e) return false; out.copy(e.group.position).add(new THREE.Vector3(0, 2.5, 0)); return true; }
-    if (b.kind === 'driver') { const e = bayEntry[b.i]; if (!e || !e.person) return false; out.copy(e.person.position).add(new THREE.Vector3(0, 2.0, 0)); return true; }
-    if (b.kind === 'vehicle') { const e = bayEntry[b.i]; if (!e) return false; out.copy(e.group.position).add(new THREE.Vector3(0, 2.6, 0)); return true; }
-    if (b.kind === 'transformer') { out.copy(tankWorld).add(new THREE.Vector3(0, 1.4, 0)); return true; }
-    if (b.kind === 'box') { out.set(0, M.HUB_Y + 0.5, WALLZ + 0.2); return true; }
-    return false;
+    if (b.kind === 'queue') { const e = queueEntry(b.id); if (!e) return null; out.copy(e.group.position).add(new THREE.Vector3(0, 2.4, 0)); return 'above'; }
+    if (b.kind === 'driver') { const e = bayEntry[b.i]; if (!e || !e.person) return null; out.copy(e.person.position).add(new THREE.Vector3(0.2, 0.05, 1.0)); return 'below'; }
+    if (b.kind === 'vehicle') { const e = bayEntry[b.i]; if (!e) return null; out.copy(e.group.position).add(new THREE.Vector3(-0.2, 0.05, 2.0)); return 'below'; }
+    if (b.kind === 'transformer') { out.copy(tankWorld).add(new THREE.Vector3(0, 1.45, 0)); return 'above'; }
+    if (b.kind === 'box') { out.set(0, M.HUB_Y + 0.5, WALLZ + 0.2); return 'above'; }
+    return null;
   }
   const pickOf = (b) => (b.kind === 'queue' ? { type: 'queue', id: b.id } : b.kind === 'driver' ? { type: 'driver', i: b.i } : b.kind === 'vehicle' ? { type: 'vehicle', i: b.i } : { type: b.kind });
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), tmpc = new THREE.Color();
   function drawBubbles(list) {
     const seen = new Set(); let hintTarget = null;
     list.forEach((b) => {
-      if (!targetPos(b, tmp)) return;
+      const side = targetPos(b, tmp); if (!side) return;
       const key = b.kind + (b.id != null ? b.id : b.i != null ? b.i : ''); seen.add(key);
       const el = bubbleEl(key); const html = `<i>${ICON[b.icon] || ''}</i><span>${b.text}</span>`;
       if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; el.onclick = () => onTap(pickOf(b)); }
-      el.classList.toggle('tut', !!b.tutorial); el.classList.toggle('info', !!b.info);
+      el.classList.toggle('tut', !!b.tutorial); el.classList.toggle('info', !!b.info); el.classList.toggle('below', side === 'below');
       if (b.progress != null) el.style.setProperty('--p', (clamp(b.progress, 0, 1) * 360).toFixed(0) + 'deg'); el.classList.toggle('timer', b.progress != null); el.classList.toggle('late', b.progress != null && b.progress < 0.3);
       tmp2.copy(tmp).project(camera);
       if (tmp2.z > 1) { el.style.display = 'none'; return; }
       el.style.display = 'flex';
       const sx = clamp((tmp2.x * 0.5 + 0.5) * vw, 56, vw - 56), sy = clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 48, vh - 40);
-      el.style.transform = `translate(${sx.toFixed(1)}px,${sy.toFixed(1)}px) translate(-50%,-100%)`;
+      el.style.transform = `translate(${sx.toFixed(1)}px,${sy.toFixed(1)}px) translate(-50%,${side === 'below' ? '10px' : '-100%'})`;
       if (b.tutorial && !hintTarget) hintTarget = tmp.clone();
     });
     bubbleEls.forEach((el, key) => { if (!seen.has(key)) { el.remove(); bubbleEls.delete(key); } });
@@ -300,7 +304,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
     while (tags.length < pods.length) { const i = tags.length, el = document.createElement('button'); el.type = 'button'; el.className = 'podtag'; el.onclick = () => onTap({ type: 'pod', i }); el.setAttribute('aria-label', 'Plug point ' + (i + 1)); labelsEl.appendChild(el); tags.push(el); }
     const live = game.state.phase === 'tutorial' || game.state.phase === 'play';
     tags.forEach((el, i) => {
-      if (!pods[i] || focus.kind !== 'main' || !live) { el.style.display = 'none'; return; }
+      if (!pods[i] || focus.kind !== 'main' || !live || !S.sockets[i].vehicle || S.sockets[i].status === 'arriving') { el.style.display = 'none'; return; }
       const s = S.sockets[i], cls = !S.power ? 'off' : s.status === 'charging' ? 'run' : s.status === 'stopped' ? 'wait' : s.status === 'done' ? 'done' : 'free';
       const prog = s.vehicle ? (s.status === 'done' ? 1 : s.vehicle.soc) : 0, html = s.vehicle && s.status !== 'arriving' ? `<b>${Math.round(prog * 100)}%</b><small>Plug ${i + 1}</small>` : `<b>${i + 1}</b><small>Plug</small>`;
       if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
@@ -328,7 +332,6 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
     const place2 = (el, p) => { tmp2.copy(p).project(camera); if (tmp2.z > 1) { el.style.display = 'none'; return; } el.style.display = 'block'; el.style.transform = `translate(${((tmp2.x * 0.5 + 0.5) * vw).toFixed(1)}px,${(clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 24, vh - 24)).toFixed(1)}px) translate(-50%,-50%)`; };
     if (live) {
       hotDefs.forEach((d) => { if (d.kind && bubs.some((b) => b.kind === d.kind)) return; used.add(d.key); place2(hotEl(d.key, d.title, d.pick, false), d.pos()); });
-      entries.forEach((e) => { if (e.mode !== 'parked' || bubs.some((b) => b.kind === 'vehicle' && b.i === e.bay)) return; const k = 'v' + e.bay; used.add(k); place2(hotEl(k, 'See the numbers', { type: 'vehicle', i: e.bay }, true), tmp3.copy(e.group.position).add(new THREE.Vector3(0, 1.3, 0))); });
     }
     hotEls.forEach((el, k) => { if (!used.has(k)) el.style.display = 'none'; });
   }
