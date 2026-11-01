@@ -2,6 +2,6 @@
 
 | Name | Role |
 |---|---|
-| Suvajit | Leads the project. Field work in Kolkata, hardware assembly, Toto stand installation, and the initial ground work on the opportunity. Electrical safety owner: final say on anything that switches mains power. |
-| Swayamdeepta | Developer. Host and driver app, backend services. |
-| Gunjan | Developer. Connects the hardware to the software: the controller, firmware and the link to the apps. Also runs the feasibility work. |
+| Suvajit | Project lead. Field work, installation and electrical safety. |
+| Swayamdeepta | Developer. Host and driver apps, backend. |
+| Gunjan | Developer. Hardware-to-software link, firmware and feasibility. |

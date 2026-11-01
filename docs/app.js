@@ -14,7 +14,7 @@ const star = (on) => `<svg viewBox="0 0 24 24"><path d="m12 2.5 2.9 6 6.6.9-4.8 
 function fallback() {
   document.body.classList.add('nogl');
   $('fallback').hidden = false;
-  ['scene', 'labels', 'vignette', 'top', 'intro', 'toasts', 'legend'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  ['scene', 'labels', 'vignette', 'top', 'intro', 'dock'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
 }
 function pickQuality() {
   const p = params.get('q'); if (p === 'low' || p === 'high') return p;
@@ -41,7 +41,7 @@ async function boot() {
   const insets = () => {
     const open = CARDS.map($).find((c) => !c.hidden), focusMode = !!open && FOCUS_CARDS.includes(open.id); document.body.classList.toggle('focus', focusMode);
     const hh = $('top').offsetHeight; document.documentElement.style.setProperty('--hh', hh + 'px');
-    scene.setInsets({ top: focusMode ? 0 : hh, bottom: open ? Math.min(open.offsetHeight + 16, innerHeight * 0.5) : 0 });
+    const dk = $('dock'); scene.setInsets({ top: focusMode ? 0 : hh, bottom: open ? Math.min(open.offsetHeight + 16, innerHeight * 0.5) : Math.min(dk.offsetHeight, 120) });
   };
   let openCard = null, statsI = -1, insideKind = 'hub', insideI = 0;
   function showCard(id) {
@@ -73,6 +73,7 @@ async function boot() {
     if (kind === 'hub') { $('inTitle').textContent = 'Inside the Box'; $('inSub').textContent = '40 × 30 × 15 cm · parts ≈ ₹3,000 (estimate)'; }
     else { $('inTitle').textContent = 'Plug-point unit ' + (i + 1); $('inSub').textContent = '14 × 20 × 8 cm · parts ≈ ₹1,000–1,500 (estimate)'; }
     const chips = $('inParts'); chips.innerHTML = '';
+    { const o = document.createElement('button'); o.type = 'button'; o.textContent = 'Overview'; o.onclick = () => { scene.clearPin(); sfx.tap(); }; chips.appendChild(o); }
     scene.pins().forEach((p, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = (k + 1) + ' · ' + p.label; b.onclick = () => { scene.selectPin(k); sfx.tap(); }; chips.appendChild(b); });
   }
   function showPin(k, p) {
@@ -112,7 +113,7 @@ async function boot() {
   let shown = 0;
   function tick() {
     shown += (S.wallet - shown) * 0.3; if (Math.abs(S.wallet - shown) < 0.5) shown = S.wallet; $('wallet').textContent = fmtINR(shown);
-    const b = game.banner(); $('banner').hidden = !b;
+    const b = game.banner(); if ($('banner').hidden !== !b) { $('banner').hidden = !b; requestAnimationFrame(insets); }
     if (b) {
       if ($('bannerText').textContent !== b.text) $('bannerText').textContent = b.text;
       const dots = $('bannerDots'), n = Math.min(b.of, 12); if (dots.children.length !== n) dots.innerHTML = '<b></b>'.repeat(n);

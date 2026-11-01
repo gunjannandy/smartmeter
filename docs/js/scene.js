@@ -5,7 +5,8 @@ import * as M from './models.js';
 const WALLZ = -3.0, CARZ = -0.75, QUEUE_Z = 5.2;
 const X6 = [-4.75, -2.85, -0.95, 0.95, 2.85, 4.75], ORDER = [2, 3, 1, 4, 0, 5];
 const slotX = (i) => X6[ORDER[i]];
-const QX = [-2.4, -0.8, 0.8, 2.4, 4.0, -4.0];
+const QX_WIDE = [-2.4, -0.8, 0.8, 2.4, 4.0, -4.0], QX_NARROW = [-1.5, -0.5, 0.5, 1.5, 2.5, -2.5];
+let QX = QX_WIDE;
 const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const LEDC = { green: 0x2fd37a, blue: 0x3d8bff, amber: 0xffb02e, red: 0xff4b4b };
@@ -227,7 +228,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
   }
   function resize() {
     vw = innerWidth; vh = innerHeight; renderer.setSize(vw, vh, false); camera.aspect = vw / vh;
-    camera.setViewOffset(vw, vh, Math.round((ins.right - ins.left) / 2), Math.round((ins.bottom - ins.top) / 2), vw, vh); camera.updateProjectionMatrix(); setGoal();
+    QX = vw / vh < 0.8 ? QX_NARROW : QX_WIDE; camera.setViewOffset(vw, vh, Math.round((ins.right - ins.left) / 2), Math.round((ins.bottom - ins.top) / 2), vw, vh); camera.updateProjectionMatrix(); setGoal();
   }
   addEventListener('resize', resize);
   const ptr = new Map(); let lastPinch = 0, downAt = null;
@@ -293,7 +294,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
       tmp2.copy(tmp).project(camera);
       if (tmp2.z > 1) { el.style.display = 'none'; return; }
       el.style.display = 'flex';
-      const sx = clamp((tmp2.x * 0.5 + 0.5) * vw, 56, vw - 56), sy = clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 48, vh - 40);
+      const sx = clamp((tmp2.x * 0.5 + 0.5) * vw, 56, vw - 56), sy = clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 48, vh - ins.bottom - 24);
       el.style.transform = `translate(${sx.toFixed(1)}px,${sy.toFixed(1)}px) translate(-50%,${side === 'below' ? '10px' : '-100%'})`;
       if (b.tutorial && !hintTarget) hintTarget = tmp.clone();
     });
@@ -329,7 +330,7 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
   }
   function drawHot(bubs) {
     const live = (game.state.phase === 'tutorial' || game.state.phase === 'play') && focus.kind === 'main', used = new Set();
-    const place2 = (el, p) => { tmp2.copy(p).project(camera); if (tmp2.z > 1) { el.style.display = 'none'; return; } el.style.display = 'block'; el.style.transform = `translate(${((tmp2.x * 0.5 + 0.5) * vw).toFixed(1)}px,${(clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 24, vh - 24)).toFixed(1)}px) translate(-50%,-50%)`; };
+    const place2 = (el, p) => { tmp2.copy(p).project(camera); if (tmp2.z > 1) { el.style.display = 'none'; return; } el.style.display = 'block'; el.style.transform = `translate(${((tmp2.x * 0.5 + 0.5) * vw).toFixed(1)}px,${(clamp((-tmp2.y * 0.5 + 0.5) * vh, ins.top + 24, vh - ins.bottom - 16)).toFixed(1)}px) translate(-50%,-50%)`; };
     if (live) {
       hotDefs.forEach((d) => { if (d.kind && bubs.some((b) => b.kind === d.kind)) return; used.add(d.key); place2(hotEl(d.key, d.title, d.pick, false), d.pos()); });
     }
@@ -458,7 +459,12 @@ export function createScene({ canvas, labelsEl, sim, game, onTap, onPin, onQuali
   return {
     focus(kind, i = 0) { focus = { kind, i }; buildPins(kind, i); setGoal(); },
     pins: () => (pinData ? pinData.data : []),
-    selectPin(k) { if (!pinData || !pinData.data[k]) return; pinEls.forEach((x, n) => x.classList.toggle('on', n === k)); onPin && onPin(k, pinData.data[k]); },
+    selectPin(k) {
+      if (!pinData || !pinData.data[k]) return; pinEls.forEach((x, n) => x.classList.toggle('on', n === k)); onPin && onPin(k, pinData.data[k]);
+      pinData.grp.updateMatrixWorld(true); const w = pinData.grp.localToWorld(pinData.data[k].pos.clone());
+      Object.assign(goal, { tx: w.x, ty: w.y, tz: w.z, r: fit(0.07, 0.05, 0.08), az: 0.1, pol: 1.5 }); dragAz = 0; dragPol = 0; zoomK = 1;
+    },
+    clearPin() { pinEls.forEach((x) => x.classList.remove('on')); setGoal(); },
     getFocus: () => focus,
     setInsets(v) { Object.assign(ins, v); resize(); },
     flashSync() { syncFlash = 3.2; },

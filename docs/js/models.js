@@ -113,6 +113,104 @@ export function makeScooter(variant = 0) {
 
 /* ---------- Box, plug-point units, trunk ---------- */
 export const HUB_Y = 1.6, POD_Y = 0.98;
+/* ---------- accurate internals (real part sizes, metres) ---------- */
+const METAL = () => mat(0xb9c0c7, { metalness: 0.85, roughness: 0.3 });
+const lbl = (key, w, h, text, o = {}) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: signTex(key, o.pw || 128, o.ph || 48, o.bg || '#eef1f4', [{ text, size: o.size || 20, y: (o.ph || 48) / 2, font: "'DM Mono',monospace", color: o.color || '#222', weight: 500 }]) }));
+function screwHead(p, x, y, z, r = 0.0026, axis = 'z') { const s = cyl(p, r, 0.0015, METAL(), x, y, z, 8); if (axis === 'z') s.rotation.x = Math.PI / 2; return s; }
+function tube(p, pts, color, r = 0.0022) {
+  const c = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  const m = new THREE.Mesh(new THREE.TubeGeometry(c, 18, r, 6, false), mat(color, { roughness: 0.55 })); p.add(m); return m;
+}
+const LIVE = 0xd33a3a, NEUT = 0x2f6fd0, EARTH = 0x9ab32f;
+function breaker(p, x, y, kind) {
+  const g = new THREE.Group(); g.position.set(x, y, 0.04); p.add(g);
+  box(g, 0.036, 0.085, 0.062, 0.004, mat(kind === 'spd' ? 0xdfe3e7 : 0xe6e8eb, { roughness: 0.5 }), 0, 0, 0);
+  box(g, 0.03, 0.03, 0.004, 0.002, mat(0x2b2f35), 0, -0.012, 0.032);
+  const tag = (key, text, y2) => { const m = lbl(key, 0.03, 0.013, text); m.position.set(0, y2, 0.0325); g.add(m); };
+  if (kind === 'mcb') { box(g, 0.012, 0.02, 0.011, 0.003, mat(0xff8a1f), 0, -0.006, 0.037); tag('mcb', 'C32 · 32A', 0.026); }
+  if (kind === 'rccb') { box(g, 0.012, 0.02, 0.011, 0.003, mat(0x14181d), 0, -0.006, 0.037); box(g, 0.009, 0.008, 0.006, 0.002, mat(0x3a7bd3), 0, 0.012, 0.035); tag('rccb', '30 mA · 40A', 0.03); }
+  if (kind === 'spd') { box(g, 0.014, 0.012, 0.004, 0.002, mat(0x2fd37a, { emissive: 0x2fd37a, emissiveIntensity: 1.3 }), 0, 0.016, 0.034); tag('spd', 'SPD · 40kA', 0.032); }
+  [0.0435, -0.0435].forEach((yy) => { box(g, 0.028, 0.0065, 0.012, 0.002, METAL(), 0, yy, 0.014); [-0.008, 0.008].forEach((xx) => screwHead(g, xx, yy + (yy > 0 ? 0.0035 : -0.0035), 0.014, 0.0032, 'y')); });
+  return g;
+}
+function powerModule(p, x, y) {
+  const g = new THREE.Group(); g.position.set(x, y, 0.016); p.add(g);
+  box(g, 0.034, 0.02, 0.015, 0.002, mat(0x1d2430, { roughness: 0.6 }), 0, 0, 0);
+  const l = lbl('psu', 0.03, 0.012, 'AC-DC 5V', { bg: '#cfd6dc' }); l.position.set(0, 0, 0.0078); g.add(l);
+  [-0.012, -0.004, 0.004, 0.012].forEach((xx) => cyl(g, 0.0008, 0.006, METAL(), xx, -0.012, -0.002, 5));
+  return g;
+}
+function esp32(p, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); p.add(g);
+  box(g, 0.051, 0.028, 0.0016, 0.0003, mat(0x1a6e48, { roughness: 0.5 }), 0, 0, 0);
+  box(g, 0.0255, 0.018, 0.0031, 0.0005, METAL(), -0.007, 0, 0.0023);
+  const l = lbl('esp', 0.022, 0.007, 'ESP32', { bg: '#d6dbe0', size: 22 }); l.position.set(-0.007, 0, 0.004); g.add(l);
+  box(g, 0.0115, 0.018, 0.0008, 0.0002, mat(0x0d1013), 0.0115, 0, 0.0012);
+  [-0.006, -0.002, 0.002, 0.006].forEach((yy) => box(g, 0.009, 0.0007, 0.0006, 0.0001, mat(0xd8b64a, { metalness: 0.7 }), 0.0115, yy, 0.0018));
+  [0.0128, -0.0128].forEach((yy) => { box(g, 0.047, 0.0025, 0.0085, 0.0003, mat(0x15181c), 0, yy, -0.0035); for (let k = -9; k <= 9; k++) cyl(g, 0.00035, 0.007, METAL(), k * 0.0025, yy, -0.0095, 4); });
+  box(g, 0.0075, 0.0055, 0.0026, 0.0006, METAL(), -0.0262, 0, 0.0021);
+  const led = new THREE.MeshStandardMaterial({ color: 0xff3b30, emissive: 0xff3b30, emissiveIntensity: 1.4 }); box(g, 0.0014, 0.0008, 0.0006, 0.0002, led, 0.0135, 0.0105, 0.0011);
+  return g;
+}
+function terminal(p, x, y, col) {
+  box(p, 0.0098, 0.034, 0.026, 0.0015, mat(col, { roughness: 0.5 }), x, y, 0.016); box(p, 0.0075, 0.005, 0.002, 0.0006, mat(0x15191e), x, y - 0.008, 0.0295);
+  screwHead(p, x, y + 0.009, 0.0295, 0.0028);
+}
+function din(p, y) { box(p, 0.34, 0.035, 0.008, 0.001, mat(0x9aa7b3, { metalness: 0.6, roughness: 0.4 }), 0, y, 0.004); [-0.15, 0.15].forEach((x) => screwHead(p, x, y, 0.0085, 0.003)); }
+function buildHubInner(inner) {
+  din(inner, 0.085); din(inner, -0.04);
+  breaker(inner, -0.145, 0.085, 'mcb'); breaker(inner, -0.109, 0.085, 'rccb'); breaker(inner, -0.073, 0.085, 'spd');
+  powerModule(inner, -0.018, 0.1);
+  esp32(inner, 0.095, 0.09, 0.026);
+  [[-0.021, 0.008], [0.021, 0.008], [-0.021, 0.172], [0.021, 0.172]].forEach(([dx]) => cyl(inner, 0.0022, 0.012, METAL(), 0.095 + dx, 0.09 + (dx < 0 ? -0.011 : 0.011), 0.011, 6).rotation.x = Math.PI / 2);
+  [LIVE, LIVE, LIVE, NEUT, NEUT, NEUT, 0x6aa843, 0x6aa843, 0x777d84, 0x777d84].forEach((c, i) => terminal(inner, -0.0585 + i * 0.0125, -0.04, c));
+  box(inner, 0.13, 0.004, 0.004, 0.001, mat(0xc98a3a, { metalness: 0.8, roughness: 0.4 }), -0.0225, -0.0185, 0.034);
+  tube(inner, [[-0.123, -0.155, 0.05], [-0.123, -0.1, 0.05], [-0.0585, -0.085, 0.04], [-0.0585, -0.06, 0.032]], LIVE, 0.0028);
+  tube(inner, [[-0.119, -0.155, 0.045], [-0.119, -0.105, 0.045], [-0.021, -0.088, 0.04], [-0.021, -0.06, 0.032]], NEUT, 0.0028);
+  tube(inner, [[-0.127, -0.155, 0.04], [-0.127, -0.108, 0.04], [0.0165, -0.09, 0.04], [0.0165, -0.06, 0.032]], EARTH, 0.0028);
+  tube(inner, [[0.0, -0.155, 0.05], [0.0, -0.1, 0.05], [0.0415, -0.088, 0.04], [0.0415, -0.06, 0.032]], LIVE, 0.0028);
+  tube(inner, [[0.004, -0.155, 0.046], [0.004, -0.106, 0.046], [0.0665, -0.088, 0.04], [0.0665, -0.06, 0.032]], NEUT, 0.0028);
+  tube(inner, [[0.008, -0.155, 0.04], [0.008, -0.108, 0.04], [0.0915, -0.09, 0.04], [0.0915, -0.06, 0.032]], 0x777d84, 0.0018);
+  tube(inner, [[-0.0585, -0.022, 0.034], [-0.0585, 0.0, 0.07], [-0.151, 0.02, 0.07], [-0.151, 0.04, 0.054]], LIVE, 0.0028);
+  tube(inner, [[-0.139, 0.131, 0.058], [-0.139, 0.142, 0.075], [-0.115, 0.142, 0.075], [-0.115, 0.131, 0.058]], LIVE, 0.0026);
+  tube(inner, [[-0.103, 0.131, 0.058], [-0.103, 0.142, 0.075], [-0.079, 0.142, 0.075], [-0.079, 0.131, 0.058]], LIVE, 0.0026);
+  tube(inner, [[-0.067, 0.04, 0.054], [-0.067, 0.02, 0.07], [-0.0225, 0.0, 0.07], [0.0415, -0.022, 0.034]], NEUT, 0.0026);
+  tube(inner, [[-0.018, 0.108, 0.02], [0.02, 0.118, 0.045], [0.066, 0.108, 0.034], [0.07, 0.1, 0.03]], LIVE, 0.0011);
+  tube(inner, [[-0.014, 0.108, 0.02], [0.024, 0.122, 0.048], [0.07, 0.112, 0.036], [0.074, 0.1, 0.03]], 0x14181d, 0.0011);
+  tube(inner, [[0.1, 0.075, 0.03], [0.1, 0.02, 0.05], [0.0665, -0.01, 0.04], [0.0665, -0.02, 0.034]], 0xe8a21a, 0.0011);
+  [[-0.17, 0.14], [0.17, 0.14], [-0.17, -0.14], [0.17, -0.14]].forEach(([x, y]) => screwHead(inner, x, y, 0.002, 0.003));
+}
+function relayCube(p, x, y, z, k = 1) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(k); p.add(g);
+  box(g, 0.019, 0.0155, 0.0155, 0.0008, mat(0x1b5fb8, { roughness: 0.45 }), 0, 0, 0);
+  const l = lbl('relay', 0.0165, 0.0095, '16A 250V', { bg: '#dfe6ee', size: 16, pw: 128, ph: 72 }); l.position.set(0, 0, 0.0079); g.add(l);
+  [-0.007, -0.0035, 0, 0.0035, 0.007].forEach((xx) => cyl(g, 0.0006, 0.005, METAL(), xx, -0.0105, -0.004, 5));
+  return g;
+}
+function meterBoard(p, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); p.add(g);
+  box(g, 0.058, 0.04, 0.0016, 0.0003, mat(0x1d4f8f, { roughness: 0.5 }), 0, 0, 0);
+  box(g, 0.012, 0.007, 0.0016, 0.0003, mat(0x14181d), -0.012, 0.007, 0.0016); box(g, 0.007, 0.005, 0.0014, 0.0003, mat(0x14181d), 0.004, 0.009, 0.0016);
+  box(g, 0.02, 0.011, 0.01, 0.001, mat(0x2f6fd0), 0.0165, -0.0125, 0.005); [0.0095, 0.0235].forEach((xx) => screwHead(g, xx, -0.0125, 0.0105, 0.0022));
+  const l = lbl('pzem', 0.026, 0.007, 'METER', { bg: '#d6dbe0', size: 22 }); l.position.set(-0.013, -0.011, 0.0012); g.add(l);
+  return g;
+}
+function currentRing(p, x, y, z) {
+  const r = new THREE.Mesh(new THREE.TorusGeometry(0.0125, 0.0045, 8, 24), mat(0x15181c, { roughness: 0.6 })); r.position.set(x, y, z); p.add(r);
+  cyl(p, 0.0035, 0.03, mat(LIVE), x, y, z, 8).rotation.x = Math.PI / 2;
+}
+function buildPodInner(inner) {
+  box(inner, 0.12, 0.1, 0.002, 0.0006, mat(0xdfe3e7), 0, 0, 0.001);
+  meterBoard(inner, -0.026, 0.015, 0.016); currentRing(inner, 0.025, 0.026, 0.018);
+  relayCube(inner, 0.025, -0.012, 0.012, 1.6);
+  esp32(inner, -0.03, -0.028, 0.016).scale.setScalar(0.62);
+  tube(inner, [[0.025, 0.05, 0.006], [0.025, 0.04, 0.018], [0.036, 0.026, 0.018], [0.036, 0.0, 0.02]], LIVE, 0.0022);
+  tube(inner, [[0.025, -0.003, 0.012], [0.04, -0.03, 0.016], [0.02, -0.044, 0.014], [0.0, -0.05, 0.01]], LIVE, 0.0022);
+  tube(inner, [[0.045, 0.05, 0.006], [0.05, 0.0, 0.016], [0.05, -0.044, 0.012], [0.02, -0.052, 0.01]], NEUT, 0.0022);
+  tube(inner, [[0.013, -0.02, 0.014], [-0.002, -0.026, 0.02], [-0.014, -0.03, 0.02], [-0.02, -0.033, 0.018]], 0xe8a21a, 0.0011);
+  [[-0.055, 0.045], [0.055, 0.045], [-0.055, -0.045], [0.055, -0.045]].forEach(([x, y]) => screwHead(inner, x, y, 0.002, 0.0025));
+}
+
 export function makeHub() {
   const g = new THREE.Group(), shell = mat(0xcfd8e0, { roughness: 0.45, metalness: 0.1 });
   box(g, 0.46, 0.36, 0.012, 0.01, mat(0x8a5a35), 0, 0, 0.006);
@@ -132,24 +230,15 @@ export function makeHub() {
   cyl(g, 0.007, 0.12, mat(0x15191e), 0.14, 0.24, 0.1, 8);                                                            // antenna
   [-0.12, 0, 0.12].forEach((x, i) => { cyl(g, 0.017, 0.045, mat(0x15191e), x, -0.2, 0.075, 10); cyl(g, i === 1 ? 0.012 : 0.008, 0.1, mat(i === 0 ? 0x1b1b1b : 0x2b3540), x, -0.26, 0.075, 8); });
   const inner = new THREE.Group(); inner.position.set(0, 0, 0.012); g.add(inner); inner.visible = false;
-  const white = mat(0xf2f4f6), pcb = mat(0x1e8f5a), metal = mat(0xc3ccd4, { metalness: 0.7 }), blk = mat(0x14181d), live = mat(0xd33a3a), neu = mat(0x2f6fd0), earth = mat(0x6aa843);
-  box(inner, 0.34, 0.012, 0.008, 0.002, mat(0x9aa7b3, { metalness: 0.6 }), 0, 0.045, 0.004);
-  box(inner, 0.036, 0.085, 0.07, 0.004, white, -0.13, 0.045, 0.04); box(inner, 0.014, 0.022, 0.012, 0.003, mat(0xff8a1f), -0.13, 0.065, 0.078); box(inner, 0.03, 0.01, 0.002, 0.001, blk, -0.13, 0.03, 0.076);     // breaker (MCB)
-  box(inner, 0.036, 0.085, 0.07, 0.004, white, -0.09, 0.045, 0.04); box(inner, 0.014, 0.014, 0.012, 0.003, mat(0x3a7bd3), -0.09, 0.07, 0.078); box(inner, 0.014, 0.014, 0.012, 0.003, blk, -0.09, 0.04, 0.078); // earth-leakage (RCCB)
-  box(inner, 0.036, 0.085, 0.07, 0.004, mat(0xe8eaee), -0.05, 0.045, 0.04); box(inner, 0.012, 0.012, 0.004, 0.002, mat(0x2fd37a, { emissive: 0x2fd37a, emissiveIntensity: 1.2 }), -0.05, 0.07, 0.077); // surge protector
-  box(inner, 0.034, 0.02, 0.015, 0.003, mat(0x2a3340), 0.0, 0.06, 0.012);                                                         // 5 V power module
-  box(inner, 0.06, 0.036, 0.003, 0.001, pcb, 0.09, 0.07, 0.014); box(inner, 0.02, 0.018, 0.004, 0.001, metal, 0.105, 0.07, 0.017); box(inner, 0.012, 0.004, 0.003, 0.001, mat(0xd8b64a), 0.075, 0.056, 0.016); // controller board
-  [-0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.15].forEach((x, i) => { box(inner, 0.034, 0.022, 0.026, 0.004, i < 3 ? live : i < 5 ? neu : earth, x, -0.095, 0.014); box(inner, 0.016, 0.004, 0.004, 0.001, blk, x, -0.088, 0.03); }); // terminals
-  [-0.13, -0.09].forEach((x) => cyl(inner, 0.003, 0.14, live, x, -0.015, 0.03, 6)); cyl(inner, 0.003, 0.12, neu, -0.05, -0.03, 0.03, 6);
-  box(inner, 0.3, 0.004, 0.004, 0.001, live, 0, -0.058, 0.02); box(inner, 0.3, 0.004, 0.004, 0.001, neu, 0, -0.066, 0.02);
+  buildHubInner(inner);
   g.userData = { hinge, inner, leds,
     pins: [
-      { label: 'Controller', desc: 'Bluetooth and Wi-Fi. Meters nothing itself: it talks to every plug-point unit and to the cloud. About 5 × 3 cm.', pos: new THREE.Vector3(0.09, 0.1, 0.1) },
-      { label: 'Circuit breaker', desc: 'Cuts the whole supply on overload. Sized by what the wall wiring can carry.', pos: new THREE.Vector3(-0.13, 0.11, 0.1) },
-      { label: 'Earth-leakage protector (RCCB)', desc: 'Trips in milliseconds if current leaks to earth. This is what protects a person.', pos: new THREE.Vector3(-0.09, 0.11, 0.1) },
-      { label: 'Surge protector', desc: 'Absorbs voltage spikes from the grid so the electronics survive.', pos: new THREE.Vector3(-0.05, 0.11, 0.1) },
-      { label: '5 V power module', desc: 'Turns mains into 5 V for the controller.', pos: new THREE.Vector3(0.0, 0.085, 0.1) },
-      { label: 'Terminals and wiring', desc: 'Live (red), neutral (blue) and earth (green) leave through the glands at the bottom: power in from the grid, and one cable out to the plug-point units.', pos: new THREE.Vector3(0, -0.07, 0.1) },
+      { label: 'Controller', desc: 'Bluetooth and Wi-Fi. It meters nothing itself: it talks to every plug-point unit and to the cloud. The board is about 5 × 3 cm.', pos: new THREE.Vector3(0.095, 0.115, 0.06) },
+      { label: 'Circuit breaker', desc: 'A 32 A breaker. It cuts the whole supply on overload. The rating is set by what the wall wiring can carry.', pos: new THREE.Vector3(-0.152, 0.145, 0.085) },
+      { label: 'Earth-leakage protector (RCCB)', desc: 'Trips in milliseconds if current leaks to earth. This is the part that protects a person.', pos: new THREE.Vector3(-0.109, 0.115, 0.085) },
+      { label: 'Surge protector', desc: 'Absorbs voltage spikes from the grid. The green window shows it is healthy.', pos: new THREE.Vector3(-0.064, 0.145, 0.085) },
+      { label: '5 V power module', desc: 'Turns mains into 5 V for the controller.', pos: new THREE.Vector3(-0.018, 0.125, 0.06) },
+      { label: 'Terminals and wiring', desc: 'Live (red), neutral (blue) and earth (green) arrive from the grid through the left gland. One cable carries power and data out to the plug-point units.', pos: new THREE.Vector3(0.0, -0.075, 0.07) },
     ],
   };
   return shadowize(g);
@@ -166,15 +255,13 @@ export function makePod() {
   const lglow = glow(g, 0xffffff, 0.16, 0, -0.058, 0.12, 0);
   place(g, new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.06), new THREE.MeshBasicMaterial({ map: qrTex() })), 0, 0.045, 0.0955);
   const inner = new THREE.Group(); inner.position.set(0, 0.045, 0.012); g.add(inner); inner.visible = false;
-  box(inner, 0.065, 0.04, 0.015, 0.003, mat(0x2f6fd0), -0.025, 0.012, 0.01); box(inner, 0.022, 0.03, 0.02, 0.004, mat(0x14181d), -0.052, -0.022, 0.01);
-  box(inner, 0.05, 0.026, 0.019, 0.003, mat(0x14181d), 0.02, -0.022, 0.01); box(inner, 0.035, 0.02, 0.003, 0.001, mat(0x1e8f5a), 0.03, 0.03, 0.005);
-  cyl(inner, 0.002, 0.05, mat(0xd33a3a), -0.04, -0.01, 0.02, 6); cyl(inner, 0.002, 0.05, mat(0x2f6fd0), -0.03, -0.01, 0.02, 6);
+  buildPodInner(inner);
   box(g, 0.05, 0.03, 0.04, 0.01, mat(0x15191e), 0, 0.11, 0.04);
   g.userData = { plate, inner, led, lglow, socketLocal: new THREE.Vector3(0, -0.058, 0.108),
     pins: [
-      { label: 'Meter', desc: 'Measures volts, amps and units for this plug point only. This is the number the bill comes from.', pos: new THREE.Vector3(-0.025, 0.06, 0.1) },
-      { label: 'Relay', desc: 'The switch. Opens when the battery is full, on a power cut, or when the Host stops the session.', pos: new THREE.Vector3(0.02, 0.025, 0.1) },
-      { label: 'Small chip', desc: 'Reads the meter, drives the relay and the light ring, and talks to the Box over the data cable.', pos: new THREE.Vector3(0.03, 0.075, 0.1) },
+      { label: 'Meter', desc: 'Measures volts, amps and units for this plug point only. This is the number the bill comes from.', pos: new THREE.Vector3(-0.026, 0.075, 0.07) },
+      { label: 'Relay', desc: 'The switch. Opens when the battery is full, on a power cut, or when the Host stops the session.', pos: new THREE.Vector3(0.027, 0.03, 0.07) },
+      { label: 'Small chip', desc: 'Reads the meter, drives the relay and the light ring, and talks to the Box over the data cable.', pos: new THREE.Vector3(-0.03, 0.015, 0.07) },
     ] };
   return shadowize(g);
 }
