@@ -18,6 +18,8 @@ Goal: decide go or no-go on a Box that is cheap, safe and easy to maintain, and 
 | B. Bench Box | A development controller with an off-the-shelf energy-metering module and relay, driven by a dummy load, to test measurement, auto-stop and Bluetooth/Wi-Fi. | Controller, metering module, relay. Mains wiring only by a qualified electrician, in a protected enclosure. |
 | C. Cost model | A spreadsheet from supplier quotes, with pessimistic and likely cases. | None |
 
+**Hardware-phase brainstorm (cheapest minimal Box, options 0/A/B/C, open questions, next-session plan): [hardware-options.md](hardware-options.md).**
+
 Start with A and C. They are cheap, and A finds most design mistakes before any hardware is bought.
 
 ## Hardware risks to test

@@ -43,3 +43,6 @@ Everything in the **Settled** table is agreed. Treat it as final unless someone 
 | Repo licence | No licence file yet. |
 | Trademark and legal checks | Not done. Resale of power and sub-meter accuracy rules are unverified in [docs/research](research). |
 | Box cost and viability | Being worked out in [docs/feasibility](feasibility). |
+| Box architecture (all in hub vs hub + remote units vs off-the-shelf plugs) | Brainstormed in [hardware-options.md](feasibility/hardware-options.md). To be narrowed to one or two approaches. ADR 0008 may change on cost grounds. |
+| Power-loss storage and clock | Direction: checkpoints in flash, supercap for final flush, RTC with backup power. See hardware-options.md. |
+| Charger load, phase, load limiting | Unknown. Needs field data from Suvajit. |
